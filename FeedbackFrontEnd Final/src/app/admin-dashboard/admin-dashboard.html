@@ -1,0 +1,516 @@
+<div class="admin-container">
+
+  <!-- ── HEADER ──────────────────────────────────── -->
+  <div class="admin-header">
+    <div>
+      <h1>
+        <i class="bi bi-shield-lock"></i>
+        Admin Dashboard
+      </h1>
+      <p class="subtitle">Logged in as <strong>{{ adminUsername() }}</strong></p>
+    </div>
+  </div>
+
+  <!-- ── STATS STRIP ───────────────────────────────── -->
+  <div class="stats-grid">
+
+    <div class="stat-card blue">
+      <div class="stat-icon-wrap blue">
+        <i class="bi bi-people"></i>
+      </div>
+      <div>
+        <div class="stat-label">Total Creators</div>
+        <div class="stat-value">{{ totalCreators }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card purple">
+      <div class="stat-icon-wrap purple">
+        <i class="bi bi-clipboard-data"></i>
+      </div>
+      <div>
+        <div class="stat-label">Total Surveys</div>
+        <div class="stat-value">{{ totalSurveys }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card green">
+      <div class="stat-icon-wrap green">
+        <i class="bi bi-check-circle"></i>
+      </div>
+      <div>
+        <div class="stat-label">Active Surveys</div>
+        <div class="stat-value">{{ activeSurveys }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── TABS ──────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'creators'" (click)="setTab('creators')">
+      <i class="bi bi-people-fill"></i>
+      Creators
+      <span class="tab-count">{{ totalCreators }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'surveys'" (click)="setTab('surveys')">
+      <i class="bi bi-clipboard2-data-fill"></i>
+      All Surveys
+      <span class="tab-count">{{ totalSurveys }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'auditLogs'" (click)="setTab('auditLogs')">
+      <i class="bi bi-journal-text"></i>
+      Audit Logs
+    </button>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- CREATORS TAB                                  -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div *ngIf="activeTab() === 'creators'">
+
+    <div class="filter-card">
+      <div class="filter-title">
+        <i class="bi bi-funnel-fill"></i> Filter Creators
+      </div>
+      <div class="filter-grid">
+
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" class="search-input" placeholder="Username or email..."
+            [(ngModel)]="creatorSearchInput" [ngModelOptions]="{standalone: true}">
+        </div>
+
+        <div class="filter-group">
+          <label>Status</label>
+          <select class="form-input" [(ngModel)]="creatorStatusInput">
+            <option [ngValue]="null">All Creators</option>
+            <option [ngValue]="true">Active Only</option>
+            <option [ngValue]="false">Inactive Only</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn-apply" (click)="applyCreatorFilters()">
+            <i class="bi bi-check-lg"></i> Apply
+          </button>
+          <button class="btn-clear" *ngIf="hasCreatorFilters" (click)="clearCreatorFilters()">
+            <i class="bi bi-x-lg"></i> Clear
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" *ngIf="creatorsLoading()">
+      <div class="spinner-border text-primary"></div>
+      <p>Loading creators...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-error" *ngIf="creatorsError()">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      {{ creatorsError() }}
+      <button class="btn-retry" (click)="loadCreators()">
+        <i class="bi bi-arrow-clockwise"></i> Retry
+      </button>
+    </div>
+
+    <!-- Empty -->
+    <div class="empty-state" *ngIf="!creatorsLoading() && creators().length === 0 && !creatorsError()">
+      <div class="empty-icon-wrap"><i class="bi bi-person-x"></i></div>
+      <p>{{ hasCreatorFilters ? 'No creators match your filters.' : 'No creators registered yet.' }}</p>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" *ngIf="!creatorsLoading() && creators().length > 0">
+
+      <div class="table-row-info">
+        <i class="bi bi-info-circle"></i>
+        Showing {{ (creatorPage - 1) * creatorPageSize + 1 }}–{{ Math.min(creatorPage * creatorPageSize, creatorTotalCount()) }}
+        of {{ creatorTotalCount() }} creator(s)
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Creator</th>
+              <th>Email</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (creator of creators(); track creator.id; let i = $index) {
+              <tr>
+                <td class="id-cell">{{ (creatorPage - 1) * creatorPageSize + i + 1 }}</td>
+                <td>
+                  <div class="user-info">
+                    <div class="user-avatar" [class.inactive-avatar]="!creator.isActive">
+                      {{ creator.username[0].toUpperCase() }}
+                    </div>
+                    <span class="username" [class.inactive-text]="!creator.isActive">
+                      {{ creator.username }}
+                    </span>
+                  </div>
+                </td>
+                <td class="email-cell">{{ creator.email }}</td>
+                <td>
+                  <div class="toggle-wrapper">
+                    <label class="toggle-switch"
+                           [title]="creator.isActive ? 'Click to deactivate' : 'Click to activate'">
+                      <input type="checkbox"
+                             [checked]="creator.isActive"
+                             [disabled]="togglingCreatorId() === creator.id"
+                             (change)="toggleCreatorStatus(creator)">
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label" [class.on]="creator.isActive" [class.off]="!creator.isActive">
+                      <span *ngIf="togglingCreatorId() !== creator.id">
+                        {{ creator.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                      <span *ngIf="togglingCreatorId() === creator.id">
+                        <span class="spinner-border spinner-border-sm"></span>
+                      </span>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" *ngIf="creatorTotalPages > 1">
+        <button class="btn-page" (click)="creatorPage = creatorPage - 1; loadCreators()" [disabled]="creatorPage === 1">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        @for (page of creatorPageNumbers; track page) {
+          <button class="btn-page-num" [class.active]="page === creatorPage"
+                  (click)="creatorPage = page; loadCreators()">{{ page }}</button>
+        }
+        <button class="btn-page" (click)="creatorPage = creatorPage + 1; loadCreators()" [disabled]="creatorPage === creatorTotalPages">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <span class="page-info">Page {{ creatorPage }} of {{ creatorTotalPages }}</span>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SURVEYS TAB                                   -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div *ngIf="activeTab() === 'surveys'">
+
+    <div class="filter-card">
+      <div class="filter-title">
+        <i class="bi bi-funnel-fill"></i> Filter Surveys
+      </div>
+      <div class="filter-grid">
+
+        <div class="filter-group">
+          <label>Search by Title</label>
+          <input type="text" class="search-input" placeholder="Survey title..."
+            [(ngModel)]="surveySearchInput" [ngModelOptions]="{standalone: true}">
+        </div>
+
+        <div class="filter-group">
+          <label>Filter by Creator</label>
+          <input type="text" class="search-input" placeholder="Creator username..."
+            [(ngModel)]="surveyCreatorInput" [ngModelOptions]="{standalone: true}">
+        </div>
+
+        <div class="filter-group">
+          <label>Status</label>
+          <select class="form-input" [(ngModel)]="surveyStatusInput">
+            <option [ngValue]="null">All Surveys</option>
+            <option [ngValue]="true">Active Only</option>
+            <option [ngValue]="false">Inactive Only</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn-apply" (click)="applySurveyFilters()">
+            <i class="bi bi-check-lg"></i> Apply
+          </button>
+          <button class="btn-clear" *ngIf="hasSurveyFilters" (click)="clearSurveyFilters()">
+            <i class="bi bi-x-lg"></i> Clear
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" *ngIf="surveysLoading()">
+      <div class="spinner-border text-primary"></div>
+      <p>Loading surveys...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-error" *ngIf="surveysError()">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      {{ surveysError() }}
+      <button class="btn-retry" (click)="loadSurveys()">
+        <i class="bi bi-arrow-clockwise"></i> Retry
+      </button>
+    </div>
+
+    <!-- Empty -->
+    <div class="empty-state" *ngIf="!surveysLoading() && surveys().length === 0 && !surveysError()">
+      <div class="empty-icon-wrap"><i class="bi bi-clipboard-x"></i></div>
+      <p>{{ hasSurveyFilters ? 'No surveys match your filters.' : 'No surveys created yet.' }}</p>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" *ngIf="!surveysLoading() && surveys().length > 0">
+
+      <div class="table-row-info">
+        <i class="bi bi-info-circle"></i>
+        Showing {{ (surveyPage - 1) * surveyPageSize + 1 }}–{{ Math.min(surveyPage * surveyPageSize, surveyTotalCount()) }}
+        of {{ surveyTotalCount() }} survey(s)
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Survey Title</th>
+              <th>Creator</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (survey of surveys(); track survey.id; let i = $index) {
+              <tr>
+                <td class="id-cell">{{ (surveyPage - 1) * surveyPageSize + i + 1 }}</td>
+                <td class="title-cell">{{ survey.title }}</td>
+                <td>
+                  <div class="creator-chip">
+                    <i class="bi bi-person"></i> {{ survey.creator }}
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" [class.active]="survey.isActive" [class.inactive]="!survey.isActive">
+                    <i class="bi" [class.bi-circle-fill]="survey.isActive" [class.bi-circle]="!survey.isActive"></i>
+                    {{ survey.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="action-group">
+                    <div class="action-row">
+                      <a class="act-btn blue" [routerLink]="['/surveys', survey.id, 'responses']">
+                        <i class="bi bi-bar-chart-line"></i> Responses
+                      </a>
+                      <a class="act-btn purple" [routerLink]="['/surveys', survey.id, 'analytics']">
+                        <i class="bi bi-graph-up-arrow"></i> Analytics
+                      </a>
+                    </div>
+                    <div class="action-row">
+                      <button class="btn-delete" (click)="openDeleteModal(survey.id, survey.title)">
+                        <i class="bi bi-trash3"></i> Delete
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" *ngIf="surveyTotalPages > 1">
+        <button class="btn-page" (click)="surveyPage = surveyPage - 1; loadSurveys()" [disabled]="surveyPage === 1">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        @for (page of surveyPageNumbers; track page) {
+          <button class="btn-page-num" [class.active]="page === surveyPage"
+                  (click)="surveyPage = page; loadSurveys()">{{ page }}</button>
+        }
+        <button class="btn-page" (click)="surveyPage = surveyPage + 1; loadSurveys()" [disabled]="surveyPage === surveyTotalPages">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <span class="page-info">Page {{ surveyPage }} of {{ surveyTotalPages }}</span>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- AUDIT LOGS TAB                                -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div *ngIf="activeTab() === 'auditLogs'">
+
+    <div class="filter-card">
+      <div class="filter-title">
+        <i class="bi bi-funnel-fill"></i> Filter Audit Logs
+      </div>
+      <div class="filter-grid">
+
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" class="search-input" placeholder="Creator, survey or action..."
+            [(ngModel)]="auditSearchInput" [ngModelOptions]="{standalone: true}"
+            (ngModelChange)="onAuditSearchChange()">
+        </div>
+
+        <div class="filter-group">
+          <label>From Date</label>
+          <input type="date" class="form-input" [(ngModel)]="auditFromDateInput">
+        </div>
+
+        <div class="filter-group">
+          <label>To Date</label>
+          <input type="date" class="form-input" [(ngModel)]="auditToDateInput">
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn-apply" (click)="applyAuditFilters()">
+            <i class="bi bi-check-lg"></i> Apply
+          </button>
+          <button class="btn-clear" (click)="clearAuditFilters()" *ngIf="hasAuditFilters">
+            <i class="bi bi-x-lg"></i> Clear
+          </button>
+          <button class="btn-retry" (click)="loadAuditLogs()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" *ngIf="auditLogsLoading()">
+      <div class="spinner-border text-primary"></div>
+      <p>Loading audit logs...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-error" *ngIf="auditLogsError()">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      {{ auditLogsError() }}
+      <button class="btn-retry" (click)="loadAuditLogs()">
+        <i class="bi bi-arrow-clockwise"></i> Retry
+      </button>
+    </div>
+
+    <!-- Empty -->
+    <div class="empty-state" *ngIf="!auditLogsLoading() && filteredAuditLogs.length === 0 && !auditLogsError()">
+      <div class="empty-icon-wrap"><i class="bi bi-journal-x"></i></div>
+      <p>{{ hasAuditFilters ? 'No logs match your filters.' : 'No activity recorded yet.' }}</p>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" *ngIf="!auditLogsLoading() && filteredAuditLogs.length > 0">
+
+      <div class="table-row-info">
+        <i class="bi bi-info-circle"></i>
+        Showing {{ (auditLogPage - 1) * auditLogPageSize + 1 }}–{{ Math.min(auditLogPage * auditLogPageSize, filteredAuditLogs.length) }}
+        of {{ filteredAuditLogs.length }} log(s)
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Action</th>
+              <th>Survey / Creator</th>
+              <th>Performed By</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of auditLogPagedItems; track log.id; let i = $index) {
+              <tr>
+                <td class="id-cell">{{ (auditLogPage - 1) * auditLogPageSize + i + 1 }}</td>
+                <td>
+                  <span class="action-badge {{ getActionClass(log.action) }}">
+                    <i class="bi {{ getActionBiIcon(log.action) }}"></i>
+                    {{ log.action }}
+                  </span>
+                </td>
+                <td class="title-cell">
+                  {{ log.surveyTitle }}
+                  <div class="survey-id-hint" *ngIf="log.surveyId > 0">ID: {{ log.surveyId }}</div>
+                </td>
+                <td>
+                  <div class="user-info">
+                    <div class="user-avatar">{{ log.performedBy[0].toUpperCase() }}</div>
+                    <span class="username">{{ log.performedBy }}</span>
+                  </div>
+                </td>
+                <td class="date-cell">
+                  {{ log.performedAt | date:'dd MMM yyyy, HH:mm' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" *ngIf="auditLogTotalPages > 1">
+        <button class="btn-page" (click)="auditLogPage = auditLogPage - 1" [disabled]="auditLogPage === 1">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        @for (page of auditLogPageNumbers; track page) {
+          <button class="btn-page-num" [class.active]="page === auditLogPage"
+                  (click)="auditLogPage = page">{{ page }}</button>
+        }
+        <button class="btn-page" (click)="auditLogPage = auditLogPage + 1" [disabled]="auditLogPage === auditLogTotalPages">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <span class="page-info">Page {{ auditLogPage }} of {{ auditLogTotalPages }}</span>
+      </div>
+
+      <div class="table-footer-note">
+        Showing {{ filteredAuditLogs.length }} of {{ auditLogs().length }} total entries
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- DELETE SURVEY MODAL                           -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showDeleteModal()" (click)="closeDeleteModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header danger">
+      <h3><i class="bi bi-trash3-fill"></i> Delete Survey</h3>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to delete this survey?</p>
+      <p class="delete-name">"{{ deleteTarget()?.name }}"</p>
+      <p class="delete-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        This will permanently delete the survey and all its responses.
+      </p>
+      <div class="alert-error mt-2" *ngIf="deleteError()">
+        <i class="bi bi-exclamation-circle"></i> {{ deleteError() }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeDeleteModal()">Cancel</button>
+      <button class="btn-danger" (click)="confirmDelete()" [disabled]="isDeleting()">
+        <span *ngIf="!isDeleting()"><i class="bi bi-trash3"></i> Delete</span>
+        <span *ngIf="isDeleting()">
+          <span class="spinner-border spinner-border-sm me-1"></span> Deleting...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

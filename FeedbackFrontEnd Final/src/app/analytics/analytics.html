@@ -1,0 +1,311 @@
+<div class="page-container">
+
+  <!-- ── HEADER ──────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+      <h1>
+        Analytics
+        <span class="survey-title-badge" *ngIf="analytics()">
+          {{ analytics()!.title }}
+        </span>
+      </h1>
+    </div>
+    <a
+      [routerLink]="['/surveys', surveyId, 'responses']"
+      class="btn-secondary-link"
+    >
+      📋 View Responses
+    </a>
+  </div>
+
+  <!-- ── LOADING ───────────────────────────────────── -->
+  <div class="loading-state" *ngIf="isLoading()">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p>Loading analytics...</p>
+  </div>
+
+  <!-- ── ERROR ─────────────────────────────────────── -->
+  <div class="alert-error" *ngIf="errorMessage()">
+    ⚠️ {{ errorMessage() }}
+  </div>
+
+  <div *ngIf="!isLoading() && analytics()">
+
+    <!-- ── SUMMARY STRIP ────────────────────────────── -->
+    <div class="summary-strip">
+
+      <div class="summary-card blue">
+        <div class="summary-icon">💬</div>
+        <div>
+          <div class="summary-value">{{ analytics()!.totalResponses }}</div>
+          <div class="summary-label">Total Responses</div>
+        </div>
+      </div>
+
+      <div class="summary-card green">
+        <div class="summary-icon">❓</div>
+        <div>
+          <div class="summary-value">{{ analytics()!.questions.length }}</div>
+          <div class="summary-label">Total Questions</div>
+        </div>
+      </div>
+
+      <div class="summary-card purple">
+        <div class="summary-icon">☑️</div>
+        <div>
+          <div class="summary-value">
+            {{ analytics()!.questions | countType:QuestionType.MultipleChoice }}
+          </div>
+          <div class="summary-label">Multiple Choice</div>
+        </div>
+      </div>
+
+      <div class="summary-card yellow">
+        <div class="summary-icon">⭐</div>
+        <div>
+          <div class="summary-value">
+            {{ analytics()!.questions | countType:QuestionType.Rating }}
+          </div>
+          <div class="summary-label">Rating Questions</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- RESPONSE TREND CHART                          -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section-card" *ngIf="!isTrendLoading()">
+
+      <div class="section-title">📈 Response Trend</div>
+
+      <!-- No trend data -->
+      <div class="empty-chart" *ngIf="trend().length === 0">
+        Not enough data to display a trend.
+      </div>
+
+      <!-- Single data point -->
+      <div class="empty-chart" *ngIf="trend().length === 1">
+        Only one day of responses recorded.
+        <strong>{{ trend()[0].date }}</strong>: {{ trend()[0].count }} response(s).
+      </div>
+
+      <!-- SVG Line Chart -->
+      <div class="chart-wrapper" *ngIf="trend().length >= 2">
+        <svg
+          [attr.viewBox]="'0 0 ' + CHART_W + ' ' + CHART_H"
+          preserveAspectRatio="xMidYMid meet"
+          class="trend-svg"
+        >
+          <!-- Grid lines -->
+          <line
+            *ngFor="let label of trendYLabels"
+            [attr.x1]="PAD_LEFT"
+            [attr.y1]="label.y"
+            [attr.x2]="CHART_W - PAD_RIGHT"
+            [attr.y2]="label.y"
+            stroke="#f3f4f6"
+            stroke-width="1"
+          />
+
+          <!-- Y axis labels -->
+          <text
+            *ngFor="let label of trendYLabels"
+            [attr.x]="PAD_LEFT - 6"
+            [attr.y]="label.y + 4"
+            text-anchor="end"
+            font-size="10"
+            fill="#9ca3af"
+          >{{ label.label }}</text>
+
+          <!-- X axis labels -->
+          <text
+            *ngFor="let label of trendXLabels"
+            [attr.x]="label.x"
+            [attr.y]="CHART_H - 4"
+            text-anchor="middle"
+            font-size="10"
+            fill="#9ca3af"
+          >{{ label.label }}</text>
+
+          <!-- Area fill -->
+          <path
+            [attr.d]="trendAreaPath"
+            fill="rgba(37,99,235,0.08)"
+          />
+
+          <!-- Line -->
+          <polyline
+            [attr.points]="trendPoints"
+            fill="none"
+            stroke="#2563eb"
+            stroke-width="2.5"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          />
+
+          <!-- Dots + Tooltips -->
+          <g *ngFor="let dot of trendDotData">
+            <circle
+              [attr.cx]="dot.x"
+              [attr.cy]="dot.y"
+              r="4"
+              fill="white"
+              stroke="#2563eb"
+              stroke-width="2"
+            />
+            <!-- Tooltip on hover via title -->
+            <title>{{ dot.date }}: {{ dot.count }} response(s)</title>
+          </g>
+
+        </svg>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- QUESTIONS ANALYTICS                           -->
+    <!-- ══════════════════════════════════════════════ -->
+    @for (question of analytics()!.questions; track question.questionId; let i = $index) {
+
+      <div class="section-card question-section">
+
+        <!-- Question Header -->
+        <div class="question-header">
+          <div class="q-number">{{ i + 1 }}</div>
+          <div class="q-info">
+            <span class="q-type-badge" [ngClass]="'badge-' + question.questionType">
+              {{ getTypeIcon(question.questionType) }} {{ getTypeName(question.questionType) }}
+            </span>
+            <p class="q-text">{{ question.questionText }}</p>
+          </div>
+        </div>
+
+        <!-- ── MULTIPLE CHOICE ──────────────────────── -->
+        <div *ngIf="question.questionType === QuestionType.MultipleChoice">
+
+          <div class="mc-summary">
+            <span class="mc-total">{{ getTotalVotes(question) }} total vote(s)</span>
+          </div>
+
+          <div class="bar-chart">
+            @for (option of question.options; track option.optionText) {
+              <div class="bar-row">
+
+                <div class="bar-label" [title]="option.optionText">
+                  {{ option.optionText }}
+                </div>
+
+                <div class="bar-track">
+                  <div
+                    class="bar-fill"
+                    [style.width.%]="getBarWidth(option.count, question)"
+                  ></div>
+                </div>
+
+                <div class="bar-stats">
+                  <span class="bar-count">{{ option.count }}</span>
+                  <span class="bar-percent">({{ getVotePercent(option.count, question) }}%)</span>
+                </div>
+
+              </div>
+            }
+          </div>
+
+          <!-- No votes yet -->
+          <div class="no-data" *ngIf="getTotalVotes(question) === 0">
+            No votes yet.
+          </div>
+
+        </div>
+
+        <!-- ── RATING ───────────────────────────────── -->
+        <div *ngIf="question.questionType === QuestionType.Rating">
+
+          <div class="rating-block"
+            *ngIf="question.averageRating !== null && question.averageRating !== undefined; else noRating">
+
+            <!-- Top row: big average + progress bar -->
+            <div class="rating-top">
+              <div class="rating-avg-block">
+                <span
+                  class="rating-avg-num"
+                  [style.color]="getRatingColor(question.averageRating!, question.maxRating ?? 10)"
+                >
+                  {{ question.averageRating! | number:'1.1-1' }}
+                </span>
+                <span class="rating-scale">/ {{ question.maxRating ?? '–' }}</span>
+              </div>
+              <div class="rating-bar-track">
+                <div
+                  class="rating-bar-fill"
+                  [style.width.%]="getRatingBarWidth(question.averageRating!, question.maxRating ?? 10)"
+                  [style.background]="getRatingColor(question.averageRating!, question.maxRating ?? 10)"
+                ></div>
+              </div>
+              <div class="rating-avg-label">Average Rating</div>
+            </div>
+
+            <!-- Stat cards row -->
+            <div class="rating-stats-row">
+
+              <div class="rating-stat-card">
+                <div class="rsc-value" style="color:#16a34a">
+                  {{ question.maxRating ?? '–' }}
+                </div>
+                <div class="rsc-label">Highest</div>
+              </div>
+
+              <div class="rating-stat-card">
+                <div class="rsc-value" style="color:#dc2626">
+                  {{ question.minRating ?? '–' }}
+                </div>
+                <div class="rsc-label">Lowest</div>
+              </div>
+
+              <div class="rating-stat-card">
+                <div class="rsc-value" style="color:#2563eb">
+                  {{ question.averageRating! | number:'1.1-1' }}
+                </div>
+                <div class="rsc-label">Average</div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <ng-template #noRating>
+            <div class="no-data">No ratings yet.</div>
+          </ng-template>
+
+        </div>
+
+        <!-- ── TEXT ─────────────────────────────────── -->
+        <div *ngIf="question.questionType === QuestionType.Text">
+
+          <div class="text-answers" *ngIf="question.textAnswers && question.textAnswers.length > 0; else noText">
+            <div class="text-answers-header">
+              {{ question.textAnswers.length }} answer(s)
+            </div>
+            @for (ans of question.textAnswers; track ans; let ai = $index) {
+              <div class="text-answer-item">
+                <span class="text-answer-num">{{ ai + 1 }}</span>
+                <span class="text-answer-text">{{ ans }}</span>
+              </div>
+            }
+          </div>
+
+          <ng-template #noText>
+            <div class="no-data">No text answers yet.</div>
+          </ng-template>
+
+        </div>
+
+      </div>
+
+    }
+
+  </div>
+
+</div>

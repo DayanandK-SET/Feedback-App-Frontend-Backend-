@@ -1,0 +1,85 @@
+.auth-wrapper{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:linear-gradient(120deg,#f6f9fc,#eef2ff);
+}
+
+.auth-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+
+
+.image-section {
+  background: #f8f9fa;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-section img {
+  width: 80%;
+  height: auto;
+}
+
+.form-section {
+  padding: 40px;
+}
+
+.brand h2 {
+  font-weight: 700;
+}
+
+.nav-tabs .nav-link {
+  cursor: pointer;
+}
+
+input.ng-invalid.ng-touched{
+  border:1px solid red;
+}
+
+/* ── Add these to the bottom of your authentication.css ── */
+
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+
+  /* Hidden by default — slides in when .toast-show is added */
+  opacity: 0;
+  transform: translateY(-16px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-notification.toast-show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toast-success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.toast-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}

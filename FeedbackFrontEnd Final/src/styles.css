@@ -1,0 +1,38 @@
+/* You can add global styles to this file, and also import other style files */
+/* ─────────────────────────────────────────────────────────────
+   ADD THESE RULES AT THE TOP OF YOUR src/styles.css
+   Fixes the blank gaps on left/right on every page
+   ───────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+  background: #f5f6fa;
+  color: #1a1d23;
+}
+
+/* Remove any default Angular app margins */
+app-root {
+  display: block;
+  width: 100%;
+}
+
+/* Universal page wrapper — used by every routed component */
+.page-wrapper {
+  width: 100%;
+  min-height: calc(100vh - 64px); /* subtract navbar height */
+  padding: 32px 40px;
+}
+
+@media (max-width: 768px) {
+  .page-wrapper {
+    padding: 20px 16px;
+  }
+}

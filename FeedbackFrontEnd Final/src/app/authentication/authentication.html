@@ -1,0 +1,207 @@
+<div class="auth-wrapper">
+
+  <!-- ✅ TOAST NOTIFICATION -->
+  <div
+    class="toast-notification"
+    [class.toast-success]="toastType() === 'success'"
+    [class.toast-error]="toastType() === 'error'"
+    [class.toast-show]="toastVisible()"
+  >
+    <span *ngIf="toastType() === 'success'">✅</span>
+    <span *ngIf="toastType() === 'error'">❌</span>
+    {{ toastMessage() }}
+  </div>
+
+  <div class="container">
+    <div class="row auth-card">
+
+      <!-- LEFT SIDE IMAGE -->
+      <div class="col-12 col-md-6 image-section d-flex">
+        <img src="assets/survey.svg" alt="Survey Illustration">
+      </div>
+
+      <!-- RIGHT SIDE FORM -->
+      <div class="col-12 col-md-6 form-section">
+
+        <!-- BRAND -->
+        <div class="brand text-center mb-4">
+          <h2>Feedback App</h2>
+          <p class="text-muted" style="color: darkslategrey !important;">
+            Collect insights. Improve faster.
+          </p>
+        </div>
+
+        <!-- LOGIN / REGISTER TABS -->
+        <ul class="nav nav-tabs mb-4">
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              [class.active]="activeTab === 'login'"
+              (click)="activeTab = 'login'"
+            >
+              Login
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              [class.active]="activeTab === 'register'"
+              (click)="activeTab = 'register'"
+            >
+              Register
+            </button>
+          </li>
+
+        </ul>
+
+        <!-- LOGIN FORM -->
+        <form
+          *ngIf="activeTab === 'login'"
+          #loginForm="ngForm"
+          (ngSubmit)="login()"
+        >
+
+          <!-- USERNAME -->
+          <div class="mb-3">
+            <label class="form-label"><strong>Username</strong></label>
+            <input
+              type="text"
+              class="form-control"
+              name="loginUsername"
+              [(ngModel)]="loginModel.username"
+              #loginUsername="ngModel"
+              (input)="loginError=''"
+              placeholder="Enter username"
+              required
+            >
+            <div class="text-danger mt-1" *ngIf="loginUsername.invalid && loginUsername.touched">
+              Username is required
+            </div>
+          </div>
+
+          <!-- PASSWORD -->
+          <div class="mb-3">
+            <label class="form-label"><strong>Password</strong></label>
+            <input
+              type="password"
+              class="form-control"
+              name="loginPassword"
+              [(ngModel)]="loginModel.password"
+              #loginPassword="ngModel"
+              placeholder="Enter password"
+              required
+              minlength="6"
+            >
+            <div class="text-danger mt-1" *ngIf="loginPassword.invalid && loginPassword.touched">
+              <div *ngIf="loginPassword.errors?.['required']">Password is required</div>
+              <div *ngIf="loginPassword.errors?.['minlength']">Password must be at least 6 characters</div>
+            </div>
+          </div>
+
+          <div class="text-danger mb-2" *ngIf="loginError">
+            {{ loginError }}
+          </div>
+
+          <!-- LOGIN BUTTON -->
+          <button
+            type="submit"
+            class="btn btn-primary w-100"
+            [disabled]="loginForm.invalid || isLoginLoading"
+          >
+            <span *ngIf="!isLoginLoading">Login</span>
+            <span *ngIf="isLoginLoading">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Logging in...
+            </span>
+          </button>
+
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form
+          *ngIf="activeTab === 'register'"
+          #registerForm="ngForm"
+          (ngSubmit)="register()"
+        >
+
+          <!-- USERNAME -->
+          <div class="mb-3">
+            <label class="form-label"><strong>Username</strong></label>
+            <input
+              type="text"
+              class="form-control"
+              name="registerUsername"
+              [(ngModel)]="registerModel.username"
+              #registerUsername="ngModel"
+              placeholder="Enter username"
+              required
+            >
+            <div class="text-danger mt-1" *ngIf="registerUsername.invalid && registerUsername.touched">
+              Username is required
+            </div>
+          </div>
+
+          <!-- EMAIL -->
+          <div class="mb-3">
+            <label class="form-label"><strong>Email</strong></label>
+            <input
+              type="email"
+              class="form-control"
+              name="registerEmail"
+              [(ngModel)]="registerModel.email"
+              #registerEmail="ngModel"
+              placeholder="Enter email"
+              required
+              email
+            >
+            <div class="text-danger mt-1" *ngIf="registerEmail.invalid && registerEmail.touched">
+              <div *ngIf="registerEmail.errors?.['required']">Email is required</div>
+              <div *ngIf="registerEmail.errors?.['email']">Enter a valid email address</div>
+            </div>
+          </div>
+
+          <!-- PASSWORD -->
+          <div class="mb-3">
+            <label class="form-label"><strong>Password</strong></label>
+            <input
+              type="password"
+              class="form-control"
+              name="registerPassword"
+              [(ngModel)]="registerModel.password"
+              #registerPassword="ngModel"
+              placeholder="Create password"
+              required
+              minlength="6"
+            >
+            <div class="text-danger mt-1" *ngIf="registerPassword.invalid && registerPassword.touched">
+              <div *ngIf="registerPassword.errors?.['required']">Password is required</div>
+              <div *ngIf="registerPassword.errors?.['minlength']">Password must be at least 6 characters</div>
+            </div>
+          </div>
+
+          <div class="text-danger mb-2" *ngIf="registerError">
+            {{ registerError }}
+          </div>
+
+          <!-- REGISTER BUTTON -->
+          <button
+            type="submit"
+            class="btn btn-success w-100"
+            [disabled]="registerForm.invalid || isRegisterLoading"
+          >
+            <span *ngIf="!isRegisterLoading">Register</span>
+            <span *ngIf="isRegisterLoading">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Registering...
+            </span>
+          </button>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>

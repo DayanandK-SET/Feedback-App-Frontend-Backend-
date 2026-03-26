@@ -1,0 +1,315 @@
+<div class="page-container">
+
+  <!-- ── HEADER ──────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+      <h1>Create Survey</h1>
+      <p class="subtitle">Build your survey and add questions</p>
+    </div>
+  </div>
+
+  <div class="layout-grid">
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- LEFT COLUMN — Survey Details               -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="left-col">
+
+      <div class="card">
+        <div class="card-title">📋 Survey Details</div>
+
+        <!-- Title -->
+        <div class="form-group">
+          <label>Title <span class="required">*</span></label>
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="title"
+            placeholder="e.g. Customer Satisfaction Survey"
+            maxlength="100"
+          >
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label>Description</label>
+          <textarea
+            class="form-input"
+            rows="3"
+            [(ngModel)]="description"
+            placeholder="Optional: describe what this survey is about"
+          ></textarea>
+        </div>
+
+        <!-- Expiry Date -->
+        <div class="form-group">
+          <label>Expiry Date <span class="hint">(optional)</span></label>
+          <input
+            type="datetime-local"
+            class="form-input"
+            [(ngModel)]="expireAt"
+          >
+          <p class="field-hint">Survey stops accepting responses after this date</p>
+        </div>
+
+        <!-- Max Responses -->
+        <div class="form-group">
+          <label>Max Responses <span class="hint">(optional)</span></label>
+          <input
+            type="number"
+            class="form-input"
+            [(ngModel)]="maxResponses"
+            placeholder="e.g. 100"
+            min="1"
+          >
+          <p class="field-hint">Automatically closes after this many responses</p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- RIGHT COLUMN — Questions                   -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="right-col">
+
+      <div class="card">
+
+        <div class="questions-header">
+          <div class="card-title">❓ Questions ({{ questions().length }})</div>
+          <div class="add-buttons">
+            <button class="btn-add-bank" (click)="openBankModal()">
+              📚 From Bank
+            </button>
+            <button class="btn-add-manual" (click)="openAddForm()">
+              + Add Question
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="questions-empty" *ngIf="questions().length === 0 && !showAddForm()">
+          <p>No questions yet.</p>
+          <p class="hint-text">Add questions manually or pick from your Question Bank.</p>
+        </div>
+
+        <!-- ── Question List ──────────────────────── -->
+        <div class="questions-list">
+          @for (q of questions(); track q.id; let i = $index) {
+            <div class="question-item">
+
+              <div class="q-number">{{ i + 1 }}</div>
+
+              <div class="q-content">
+                <div class="q-meta">
+                  <span class="q-type-badge">
+                    {{ getTypeIcon(q.questionType) }} {{ getTypeName(q.questionType) }}
+                  </span>
+                  <span class="q-source" *ngIf="q.fromBank">📚 From Bank</span>
+                </div>
+                <div class="q-text">{{ q.text }}</div>
+                <div class="q-options" *ngIf="q.questionType === QuestionType.MultipleChoice">
+                  <span class="q-option" *ngFor="let opt of q.options">{{ opt }}</span>
+                </div>
+              </div>
+
+              <div class="q-actions">
+                <button class="q-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up">↑</button>
+                <button class="q-btn" (click)="moveDown(i)" [disabled]="i === questions().length - 1" title="Move down">↓</button>
+                <button class="q-btn danger" (click)="removeQuestion(q.id)" title="Remove">✕</button>
+              </div>
+
+            </div>
+          }
+        </div>
+
+        <!-- ── Inline Add Question Form ──────────── -->
+        <div class="add-question-form" *ngIf="showAddForm()">
+
+          <div class="add-form-title">New Question</div>
+
+          <!-- Question Type -->
+          <div class="form-group">
+            <label>Question Type</label>
+            <select class="form-input" [(ngModel)]="newQuestion.questionType">
+              <option [ngValue]="QuestionType.Text">✏️ Text</option>
+              <option [ngValue]="QuestionType.Rating">⭐ Rating (1–10)</option>
+              <option [ngValue]="QuestionType.MultipleChoice">☑️ Multiple Choice</option>
+            </select>
+          </div>
+
+          <!-- Question Text -->
+          <div class="form-group">
+            <label>Question Text <span class="required">*</span></label>
+            <input
+              type="text"
+              class="form-input"
+              [(ngModel)]="newQuestion.text"
+              placeholder="Enter your question"
+            >
+          </div>
+
+          <!-- Options for MultipleChoice -->
+          <div *ngIf="newQuestion.questionType === QuestionType.MultipleChoice">
+            <label class="form-label-sm">Options <span class="required">*</span></label>
+            <div class="options-list">
+              @for (opt of newQuestion.options; track trackOption($index); let oi = $index) {
+                <div class="option-row">
+                  <input
+                    type="text"
+                    class="form-input option-input"
+                    [(ngModel)]="newQuestion.options[oi]"
+                    [placeholder]="'Option ' + (oi + 1)"
+                  >
+                  <button
+                    class="q-btn danger"
+                    (click)="removeOption(oi)"
+                    [disabled]="newQuestion.options.length <= 2"
+                  >✕</button>
+                </div>
+              }
+            </div>
+            <button class="btn-add-option" (click)="addOption()">+ Add Option</button>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="add-form-actions">
+            <button class="btn-modal secondary" (click)="closeAddForm()">Cancel</button>
+            <button
+              class="btn-modal primary"
+              (click)="saveQuestion()"
+              [disabled]="!newQuestion.text.trim()"
+            >
+              Add Question
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ── Submit Area ──────────────────────────── -->
+      <div class="submit-area">
+
+        <div class="alert-success" *ngIf="submitSuccess()">
+          ✅ {{ submitSuccess() }}
+        </div>
+
+        <div class="alert-error" *ngIf="submitError()">
+          ⚠️ {{ submitError() }}
+        </div>
+
+        <button
+          class="btn-submit"
+          (click)="submitSurvey()"
+          [disabled]="isSubmitting() || !title.trim() || questions().length === 0"
+        >
+          <span *ngIf="!isSubmitting()">🚀 Create Survey</span>
+          <span *ngIf="isSubmitting()">
+            <span class="spinner-border spinner-border-sm me-2"></span>Creating...
+          </span>
+        </button>
+
+        <p class="submit-hint">
+          Survey will be created as <strong>Active</strong>. UnActivate it from the Dashboard when you to want.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- QUESTION BANK MODAL                           -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showBankModal()" (click)="closeBankModal()">
+  <div class="modal-box bank-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="modal-header-custom">
+      <div>
+        <h3>📚 Question Bank</h3>
+        <p class="modal-subtitle">Select questions to add to your survey</p>
+      </div>
+      <button class="modal-close" (click)="closeBankModal()">✕</button>
+    </div>
+
+    <!-- Filter -->
+    <div class="bank-filter">
+      <select class="form-input filter-select" [(ngModel)]="bankTypeFilter" (ngModelChange)="onBankFilterChange()">
+        <option value="">All Types</option>
+        <option [ngValue]="QuestionType.Text">✏️ Text</option>
+        <option [ngValue]="QuestionType.Rating">⭐ Rating</option>
+        <option [ngValue]="QuestionType.MultipleChoice">☑️ Multiple Choice</option>
+      </select>
+      <span class="bank-count">{{ bankTotalCount() }} question(s)</span>
+    </div>
+
+    <!-- Loading -->
+    <div class="bank-loading" *ngIf="bankLoading()">
+      <div class="spinner-border text-primary"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-error m-3" *ngIf="bankError()">{{ bankError() }}</div>
+
+    <!-- Empty -->
+    <div class="bank-empty" *ngIf="!bankLoading() && bankQuestions().length === 0">
+      <p>No questions found. Add questions in the Question Bank page first.</p>
+    </div>
+
+    <!-- Questions List -->
+    <div class="bank-list" *ngIf="!bankLoading() && bankQuestions().length > 0">
+      @for (q of bankQuestions(); track q.id) {
+        <div
+          class="bank-item"
+          [class.selected]="isBankSelected(q.id)"
+          (click)="toggleBankSelect(q.id)"
+        >
+          <div class="bank-checkbox">
+            <span *ngIf="isBankSelected(q.id)">✓</span>
+          </div>
+          <div class="bank-q-content">
+            <span class="q-type-badge small">
+              {{ getTypeIcon(q.questionType) }} {{ getTypeName(q.questionType) }}
+            </span>
+            <div class="bank-q-text">{{ q.text }}</div>
+            <div class="bank-q-options" *ngIf="q.options && q.options.length > 0">
+              {{ q.options.join(' · ') }}
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Pagination -->
+    <div class="bank-pagination" *ngIf="bankTotalPages > 1">
+      <button class="btn-page" (click)="bankPrevPage()" [disabled]="bankPage === 1">← Prev</button>
+      <span>Page {{ bankPage }} of {{ bankTotalPages }}</span>
+      <button class="btn-page" (click)="bankNextPage()" [disabled]="bankPage === bankTotalPages">Next →</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer-custom">
+      <span class="selected-count">
+        {{ selectedBankIds.size }} selected
+      </span>
+      <div class="footer-actions">
+        <button class="btn-modal secondary" (click)="closeBankModal()">Cancel</button>
+        <button
+          class="btn-modal primary"
+          (click)="addSelectedFromBank()"
+          [disabled]="selectedBankIds.size === 0"
+        >
+          Add Selected
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,12 @@
+ng test --include="**/authentication.spec.ts"
+ng test --include="**/navbar.spec.ts"
+
+ng test --include="**/create-survey.spec.ts"
+ng test --include="**/dashboard.spec.ts"
+
+ng test --include="**/question-bank.spec.ts"
+ng test --include="**/admin-dashboard.spec.ts"
+
+ng test --include="**/public-survey.spec.ts"
+ng test --include="**/navbar.spec.ts"
+

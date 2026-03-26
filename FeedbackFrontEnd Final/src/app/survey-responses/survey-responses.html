@@ -1,0 +1,222 @@
+<div class="page-container">
+
+  <!-- ── HEADER ──────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+      <h1>
+        Survey Responses
+        <span class="survey-title-badge" *ngIf="surveyData()">
+          {{ surveyData()!.title }}
+        </span>
+      </h1>
+    </div>
+
+    <!-- Export Button -->
+    <button
+      class="btn-export"
+      (click)="exportToExcel()"
+      [disabled]="isExporting() || !surveyData()?.totalResponses"
+      title="Download all responses as Excel"
+    >
+      <span *ngIf="!isExporting()">📥 Export Excel</span>
+      <span *ngIf="isExporting()">
+        <span class="spinner-border spinner-border-sm me-1"></span> Exporting...
+      </span>
+    </button>
+  </div>
+
+  <!-- Export Error -->
+  <div class="alert-error" *ngIf="exportError()">
+    ⚠️ {{ exportError() }}
+  </div>
+
+  <!-- ── STATS STRIP ───────────────────────────────── -->
+  <div class="stats-strip" *ngIf="surveyData()">
+    <div class="stat-item">
+      <span class="stat-value">{{ surveyData()!.totalResponses }}</span>
+      <span class="stat-label">Total Responses</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-value">{{ pageNumber }}</span>
+      <span class="stat-label">Current Page</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-value">{{ totalPages }}</span>
+      <span class="stat-label">Total Pages</span>
+    </div>
+  </div>
+
+  <!-- ── FILTER BAR ───────────────────────────────── -->
+  <div class="filter-card">
+
+    <div class="filter-title">🔍 Filter Responses</div>
+
+    <div class="filter-grid">
+
+      <div class="form-group">
+        <label>From Date</label>
+        <input
+          type="date"
+          class="form-input"
+          [(ngModel)]="fromDate"
+        >
+      </div>
+
+      <div class="form-group">
+        <label>To Date</label>
+        <input
+          type="date"
+          class="form-input"
+          [(ngModel)]="toDate"
+        >
+      </div>
+
+      <div class="form-group">
+        <label>Question Type</label>
+        <select class="form-input" [(ngModel)]="questionTypeFilter">
+          <option value="">All Types</option>
+          <option [ngValue]="QuestionType.Text">✏️ Text</option>
+          <option [ngValue]="QuestionType.Rating">⭐ Rating</option>
+          <option [ngValue]="QuestionType.MultipleChoice">☑️ Multiple Choice</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn-apply" (click)="applyFilters()">Apply Filters</button>
+        <button
+          class="btn-clear"
+          (click)="clearFilters()"
+          *ngIf="hasActiveFilters"
+        >
+          Clear
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── LOADING ───────────────────────────────────── -->
+  <div class="loading-state" *ngIf="isLoading()">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p>Loading responses...</p>
+  </div>
+
+  <!-- ── ERROR ─────────────────────────────────────── -->
+  <div class="alert-error" *ngIf="errorMessage() && !isLoading()">
+    {{ errorMessage() }}
+    <button class="btn-retry" (click)="loadResponses()">Retry</button>
+  </div>
+
+  <!-- ── NO RESPONSES ──────────────────────────────── -->
+  <div
+    class="empty-state"
+    *ngIf="!isLoading() && surveyData()?.totalResponses === 0 && !errorMessage()"
+  >
+    <div class="empty-icon">📭</div>
+    <p>No responses yet.</p>
+    <p class="empty-hint">
+      Share the public link from the dashboard to start collecting responses.
+    </p>
+  </div>
+
+  <!-- ── NO RESULTS FOR FILTER ─────────────────────── -->
+  <div
+    class="empty-state"
+    *ngIf="!isLoading() && surveyData() && surveyData()!.totalResponses > 0 && surveyData()!.responses!.length === 0"
+  >
+    <div class="empty-icon">🔎</div>
+    <p>No responses match your filters.</p>
+    <button class="btn-clear-lg" (click)="clearFilters()">Clear Filters</button>
+  </div>
+
+  <!-- ── RESPONSES LIST ────────────────────────────── -->
+  <div
+    class="responses-section"
+    *ngIf="!isLoading() && surveyData()?.responses && surveyData()!.responses!.length > 0"
+  >
+
+    <!-- Expand/Collapse all -->
+    <div class="responses-toolbar">
+      <span class="showing-text">
+        Showing {{ startIndex }}–{{ endIndex }} of {{ surveyData()!.totalResponses }} responses
+      </span>
+      <div class="toolbar-actions">
+        <button class="btn-text" (click)="expandAll()" *ngIf="!allExpanded">
+          ↕ Expand All
+        </button>
+        <button class="btn-text" (click)="collapseAll()" *ngIf="allExpanded">
+          ↕ Collapse All
+        </button>
+      </div>
+    </div>
+
+    <!-- Response Cards -->
+    @for (response of surveyData()!.responses!; track response.responseId; let i = $index) {
+      <div class="response-card">
+
+        <!-- Response Header -->
+        <div
+          class="response-header"
+          (click)="toggleExpand(response.responseId)"
+        >
+          <div class="response-meta">
+            <span class="response-num">
+              Response #{{ startIndex + i }}
+            </span>
+            <span class="response-date">
+              🕐 {{ response.submittedAt | date:'medium' }}
+            </span>
+            <span class="answer-count">
+              {{ response.answers.length }} answer(s)
+            </span>
+          </div>
+          <span class="expand-icon">
+            {{ isExpanded(response.responseId) ? '▲' : '▼' }}
+          </span>
+        </div>
+
+        <!-- Answers (expanded) -->
+        <div class="answers-list" *ngIf="isExpanded(response.responseId)">
+          @for (answer of response.answers; track answer.questionId) {
+            <div class="answer-row">
+              <div class="answer-question">{{ answer.questionText }}</div>
+              <div class="answer-value">{{ answer.answer }}</div>
+            </div>
+          }
+        </div>
+
+      </div>
+    }
+
+    <!-- ── PAGINATION ─────────────────────────────── -->
+    <div class="pagination" *ngIf="totalPages > 1">
+
+      <button
+        class="btn-page"
+        (click)="prevPage()"
+        [disabled]="pageNumber === 1"
+      >
+        ← Prev
+      </button>
+
+      <div class="page-info">
+        <span class="page-range">{{ startIndex }}–{{ endIndex }} of {{ surveyData()!.totalResponses }}</span>
+        <span class="page-num">Page {{ pageNumber }} of {{ totalPages }}</span>
+      </div>
+
+      <button
+        class="btn-page"
+        (click)="nextPage()"
+        [disabled]="pageNumber === totalPages"
+      >
+        Next →
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

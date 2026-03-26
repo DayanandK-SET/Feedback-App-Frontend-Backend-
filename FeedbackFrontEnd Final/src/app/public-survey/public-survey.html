@@ -1,0 +1,171 @@
+<div class="survey-page">
+
+  <!-- ── HEADER BAR ──────────────────────────────── -->
+  <div class="survey-topbar">
+    <div class="topbar-logo">📋 FeedbackApp</div>
+    <div class="topbar-hint">Fill in all questions and submit</div>
+  </div>
+
+  <div class="survey-container">
+
+    <!-- ── LOADING ─────────────────────────────────── -->
+    <div class="center-state" *ngIf="isLoading()">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>Loading survey...</p>
+    </div>
+
+    <!-- ── ERROR STATE (expired / not found / closed) -->
+    <div class="state-card error-card" *ngIf="!isLoading() && errorMessage()">
+      <div class="state-icon">⚠️</div>
+      <h2>Survey Unavailable</h2>
+      <p>{{ errorMessage() }}</p>
+    </div>
+
+    <!-- ── ALREADY SUBMITTED ────────────────────────── -->
+    <div class="state-card success-card" *ngIf="!isLoading() && alreadySubmitted() && !submitSuccess()">
+      <div class="state-icon">✅</div>
+      <h2>Already Submitted</h2>
+      <p>You have already submitted a response to this survey.</p>
+      <p class="state-hint">Each person can only submit once. Thank you for your participation!</p>
+    </div>
+
+    <!-- ── SUCCESS STATE ─────────────────────────────── -->
+    <div class="state-card success-card" *ngIf="submitSuccess()">
+      <div class="state-icon">🎉</div>
+      <h2>Thank You!</h2>
+      <p>Your response has been submitted successfully.</p>
+      <p class="state-hint">We appreciate you taking the time to share your feedback.</p>
+    </div>
+
+    <!-- ── SURVEY FORM ───────────────────────────────── -->
+    <div
+      *ngIf="!isLoading() && survey() && !errorMessage() && !alreadySubmitted() && !submitSuccess()"
+    >
+
+      <!-- Survey Header -->
+      <div class="survey-header">
+        <h1 class="survey-title">{{ survey()!.title }}</h1>
+        <p class="survey-desc" *ngIf="survey()!.description">
+          {{ survey()!.description }}
+        </p>
+        <div class="q-count-badge">
+          {{ survey()!.questions.length }} question(s)
+        </div>
+      </div>
+
+      <!-- Questions -->
+      @for (question of survey()!.questions; track question.questionId; let i = $index) {
+        <div
+          class="question-card"
+          [class.has-error]="isUnanswered(question.questionId)"
+        >
+
+          <!-- Question Header -->
+          <div class="q-header">
+            <span class="q-num">{{ i + 1 }}</span>
+            <div class="q-meta">
+              <span class="q-type-tag">{{ getTypeName(question.questionType) }}</span>
+              <p class="q-text">{{ question.text }}</p>
+            </div>
+          </div>
+
+          <!-- Error indicator -->
+          <div class="q-error" *ngIf="isUnanswered(question.questionId)">
+            ⚠️ This question is required.
+          </div>
+
+          <!-- ── TEXT ANSWER ──────────────────────── -->
+          <div
+            class="answer-area"
+            *ngIf="question.questionType === QuestionType.Text"
+          >
+            <textarea
+              class="text-input"
+              rows="3"
+              placeholder="Type your answer here..."
+              [value]="getTextAnswer(question.questionId)"
+              (input)="setTextAnswer(question.questionId, $any($event.target).value)"
+            ></textarea>
+          </div>
+
+          <!-- ── RATING ───────────────────────────── -->
+          <div
+            class="answer-area"
+            *ngIf="question.questionType === QuestionType.Rating"
+          >
+            <div class="rating-row">
+              @for (n of ratingRange(question); track n) {
+                <button
+                  class="rating-btn"
+                  [class.selected]="getRatingAnswer(question.questionId) === n"
+                  (click)="setRating(question.questionId, n)"
+                  type="button"
+                >
+                  {{ n }}
+                </button>
+              }
+            </div>
+            <div class="rating-labels-row">
+              <span>Not satisfied</span>
+              <span>Very satisfied</span>
+            </div>
+            <div class="rating-selected-text" *ngIf="getRatingAnswer(question.questionId) > 0">
+              Your rating: <strong>{{ getRatingAnswer(question.questionId) }}</strong> / 10
+            </div>
+          </div>
+
+          <!-- ── MULTIPLE CHOICE ──────────────────── -->
+          <div
+            class="answer-area"
+            *ngIf="question.questionType === QuestionType.MultipleChoice"
+          >
+            <div class="options-list">
+              @for (option of question.options!; track option.optionId) {
+                <label
+                  class="option-label"
+                  [class.selected]="getSelectedOption(question.questionId) === option.optionId"
+                >
+                  <input
+                    type="radio"
+                    [name]="'q_' + question.questionId"
+                    [value]="option.optionId"
+                    [checked]="getSelectedOption(question.questionId) === option.optionId"
+                    (change)="setSelectedOption(question.questionId, option.optionId)"
+                    class="radio-input"
+                  >
+                  <span class="radio-custom"></span>
+                  <span class="option-text">{{ option.optionText }}</span>
+                </label>
+              }
+            </div>
+          </div>
+
+        </div>
+      }
+
+      <!-- Submit Error -->
+      <div class="submit-error" *ngIf="submitError()">
+        ⚠️ {{ submitError() }}
+      </div>
+
+      <!-- Submit Button -->
+      <div class="submit-area">
+        <button
+          class="btn-submit"
+          (click)="submitSurvey()"
+          [disabled]="isSubmitting()"
+          type="button"
+        >
+          <span *ngIf="!isSubmitting()">Submit Response</span>
+          <span *ngIf="isSubmitting()">
+            <span class="spinner-border spinner-border-sm me-2"></span>Submitting...
+          </span>
+        </button>
+        <p class="submit-note">Your response is anonymous and cannot be changed after submission.</p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
