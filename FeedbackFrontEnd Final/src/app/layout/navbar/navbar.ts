@@ -27,9 +27,6 @@ export class Navbar {
     return this.role() === 'Admin';
   }
 
-  get isUser(): boolean {
-    return this.role() === 'User';
-  }
 
   get isCreatorOrAdmin(): boolean {
     return this.role() === 'Creator' || this.role() === 'Admin';

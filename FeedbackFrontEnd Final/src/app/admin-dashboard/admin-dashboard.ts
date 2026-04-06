@@ -3,10 +3,10 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AdminService } from '../Services/admin.service';
-import { AdminCreatorDto, AdminSurveyDto, AuditLogDto, CreatorRequestDto } from '../models/admin.models';
+import { AdminCreatorDto, AdminSurveyDto, AuditLogDto} from '../models/admin.models';
 import { TokenService } from '../Services/token.service';
 
-type ActiveTab = 'creators' | 'surveys' | 'auditLogs' | 'approvals';
+type ActiveTab = 'creators' | 'surveys' | 'auditLogs';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -101,12 +101,6 @@ export class AdminDashboard {
   // ── Admin info ────────────────────────────────────
   adminUsername = signal<string | null>(null);
 
-  // ── Creator Requests (Approvals) ──────────────────
-  creatorRequests = signal<CreatorRequestDto[]>([]);
-  requestsLoading = signal(false);
-  requestsError = signal('');
-  pendingCount = signal(0);
-  reviewingId = signal<number | null>(null);
 
   constructor() {
     this.adminUsername.set(this.tokenService.getUsername());
@@ -327,63 +321,7 @@ export class AdminDashboard {
     if (tab === 'auditLogs' && this.auditLogs().length === 0 && !this.auditLogsLoading()) {
       this.loadAuditLogs();
     }
-    if (tab === 'approvals') {
-      this.loadCreatorRequests();
-    }
-  }
 
-  // ── Creator Requests ──────────────────────────────
-
-  loadCreatorRequests() {
-    this.requestsLoading.set(true);
-    this.requestsError.set('');
-    this.adminService.getAllCreatorRequests().subscribe({
-      next: (data) => {
-        this.creatorRequests.set(data);
-        this.pendingCount.set(data.filter(r => r.status === 'Pending').length);
-        this.requestsLoading.set(false);
-      },
-      error: () => {
-        this.requestsError.set('Failed to load creator requests.');
-        this.requestsLoading.set(false);
-      }
-    });
-  }
-
-  approveRequest(id: number) {
-    this.reviewingId.set(id);
-    this.adminService.reviewCreatorRequest(id, true).subscribe({
-      next: () => {
-        this.creatorRequests.update(list =>
-          list.map(r => r.id === id ? { ...r, status: 'Approved', reviewedAt: new Date().toISOString() } : r)
-        );
-        this.pendingCount.update(n => Math.max(0, n - 1));
-        this.reviewingId.set(null);
-        // Reload creators tab count
-        this.loadCreators();
-      },
-      error: () => this.reviewingId.set(null)
-    });
-  }
-
-  rejectRequest(id: number) {
-    this.reviewingId.set(id);
-    this.adminService.reviewCreatorRequest(id, false).subscribe({
-      next: () => {
-        this.creatorRequests.update(list =>
-          list.map(r => r.id === id ? { ...r, status: 'Rejected', reviewedAt: new Date().toISOString() } : r)
-        );
-        this.pendingCount.update(n => Math.max(0, n - 1));
-        this.reviewingId.set(null);
-      },
-      error: () => this.reviewingId.set(null)
-    });
-  }
-
-  getRequestStatusClass(status: string): string {
-    if (status === 'Approved') return 'status-approved';
-    if (status === 'Rejected') return 'status-rejected';
-    return 'status-pending';
   }
 
   // ── Delete modal (surveys) ────────────────────────

@@ -8,7 +8,6 @@ import {
   GetAdminSurveysRequestDto,
   AdminCreatorsPagedResponseDto,
   AdminSurveysPagedResponseDto,
-  CreatorRequestDto,
   GetAuditLogsRequestDto,
   AuditLogsPagedResponseDto
 } from '../models/admin.models';
@@ -51,20 +50,6 @@ export class AdminService {
 
   searchAuditLogs(request: GetAuditLogsRequestDto) {
     return this.http.post<AuditLogsPagedResponseDto>(`${this.baseUrl}/audit-logs/search`, request);
-  }
-
-  // ── Creator Requests ──────────────────────────────
-
-  getPendingCreatorRequests() {
-    return this.http.get<CreatorRequestDto[]>(`${this.baseUrl}/creator-requests/pending`);
-  }
-
-  getAllCreatorRequests() {
-    return this.http.get<CreatorRequestDto[]>(`${this.baseUrl}/creator-requests`);
-  }
-
-  reviewCreatorRequest(id: number, approve: boolean) {
-    return this.http.patch(`${this.baseUrl}/creator-requests/${id}/review`, { approve });
   }
 }
 

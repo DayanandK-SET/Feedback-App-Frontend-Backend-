@@ -46,12 +46,7 @@
     <button class="tab-btn" [class.active]="activeTab() === 'auditLogs'" (click)="setTab('auditLogs')">
       <i class="bi bi-journal-text"></i> Audit Logs
     </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'approvals'" (click)="setTab('approvals')">
-      <i class="bi bi-person-check"></i> Approvals
-      @if (pendingCount() > 0) {
-        <span class="tab-count pending-badge">{{ pendingCount() }}</span>
-      }
-    </button>
+
   </div>
 
   <!-- ══ CREATORS TAB ══ -->
@@ -314,74 +309,6 @@
       </div>
       <div class="table-footer-note">{{ auditTotalCount() }} total log(s)</div>
     </div>
-  </div>
-
-  <!-- ══ APPROVALS TAB ══ -->
-  <div *ngIf="activeTab() === 'approvals'">
-
-    <div class="loading-state" *ngIf="requestsLoading()">
-      <div class="spinner-border text-primary"></div><p>Loading requests...</p>
-    </div>
-    <div class="alert-error" *ngIf="requestsError()">
-      <i class="bi bi-exclamation-circle-fill"></i> {{ requestsError() }}
-      <button class="btn-retry" (click)="loadCreatorRequests()"><i class="bi bi-arrow-clockwise"></i> Retry</button>
-    </div>
-    <div class="empty-state" *ngIf="!requestsLoading() && creatorRequests().length === 0 && !requestsError()">
-      <div class="empty-icon-wrap"><i class="bi bi-inbox"></i></div>
-      <p>No creator requests yet.</p>
-    </div>
-
-    <div class="table-card" *ngIf="!requestsLoading() && creatorRequests().length > 0">
-      <div class="table-row-info">
-        <i class="bi bi-info-circle"></i>
-        {{ creatorRequests().length }} request(s) total &nbsp;·&nbsp;
-        <strong>{{ pendingCount() }} pending</strong>
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr><th>#</th><th>User</th><th>Email</th><th>Requested At</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            @for (req of creatorRequests(); track req.id; let i = $index) {
-              <tr>
-                <td class="id-cell">{{ i + 1 }}</td>
-                <td>
-                  <div class="user-info">
-                    <div class="user-avatar">{{ req.username[0].toUpperCase() }}</div>
-                    <span class="username">{{ req.username }}</span>
-                  </div>
-                </td>
-                <td class="email-cell">{{ req.email }}</td>
-                <td class="date-cell">{{ req.requestedAt | date:'dd MMM yyyy, HH:mm' }}</td>
-                <td>
-                  <span class="approval-status {{ getRequestStatusClass(req.status) }}">{{ req.status }}</span>
-                </td>
-                <td>
-                  @if (req.status === 'Pending') {
-                    <div class="approval-actions">
-                      <button class="btn-approve" (click)="approveRequest(req.id)" [disabled]="reviewingId() === req.id">
-                        @if (reviewingId() === req.id) {
-                          <span class="spinner-border spinner-border-sm"></span>
-                        } @else {
-                          <i class="bi bi-check-lg"></i> Approve
-                        }
-                      </button>
-                      <button class="btn-reject" (click)="rejectRequest(req.id)" [disabled]="reviewingId() === req.id">
-                        <i class="bi bi-x-lg"></i> Reject
-                      </button>
-                    </div>
-                  } @else {
-                    <span class="reviewed-at" *ngIf="req.reviewedAt">{{ req.reviewedAt | date:'dd MMM yyyy' }}</span>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </div>
 
 </div>

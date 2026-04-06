@@ -7,11 +7,9 @@ import { SurveyResponses } from './survey-responses/survey-responses';
 import { Analytics } from './analytics/analytics';
 import { PublicSurvey } from './public-survey/public-survey';
 import { AdminDashboard } from './admin-dashboard/admin-dashboard';
-import { UserDashboard } from './user-dashboard/user-dashboard';
 import { PrivateSurveyOtp } from './private-survey-otp/private-survey-otp';
 import { authGuard } from './guards/authGuard';
 import { adminGuard } from './guards/adminGuard';
-import { userGuard } from './guards/userGuard';
 import { Layout } from './layout/layout/layout';
 
 export const routes: Routes = [
@@ -21,8 +19,7 @@ export const routes: Routes = [
   { path: 'survey/:publicIdentifier', component: PublicSurvey },
   { path: 'survey/:publicIdentifier/verify', component: PrivateSurveyOtp },
 
-  // ── User role only ───────────────────────────────
-  { path: 'user-dashboard', component: UserDashboard, canActivate: [userGuard] },
+
 
   // ── Creator + Admin protected routes ────────────
   {

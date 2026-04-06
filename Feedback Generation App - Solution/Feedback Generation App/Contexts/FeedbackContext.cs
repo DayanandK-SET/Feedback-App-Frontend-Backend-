@@ -23,7 +23,6 @@ namespace Feedback_Generation_App.Contexts
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
         public DbSet<SurveyParticipant> SurveyParticipants => Set<SurveyParticipant>();
-        public DbSet<CreatorRequest> CreatorRequests => Set<CreatorRequest>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -130,12 +129,6 @@ namespace Feedback_Generation_App.Contexts
                 .HasIndex(sp => new { sp.SurveyId, sp.Email })
                 .IsUnique();
 
-            // CreatorRequest → User (Many-to-One)
-            modelBuilder.Entity<CreatorRequest>()
-                .HasOne(cr => cr.User)
-                .WithMany()
-                .HasForeignKey(cr => cr.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -21,7 +21,7 @@ export interface AuditLogDto {
   performedAt: string;
 }
 
-// ✅ NEW — request DTOs for backend search endpoints
+// request DTOs for backend search endpoints
 
 export interface GetAdminCreatorsRequestDto {
   pageNumber: number;
@@ -38,7 +38,7 @@ export interface GetAdminSurveysRequestDto {
   isActive?: boolean | null;
 }
 
-// ✅ NEW — paged response DTOs
+// paged response DTOs
 
 export interface AdminCreatorsPagedResponseDto {
   totalCount: number;
@@ -57,17 +57,7 @@ export interface AdminSurveysPagedResponseDto {
   surveys: AdminSurveyDto[];
 }
 
-// ── Creator Requests ──────────────────────────────
 
-export interface CreatorRequestDto {
-  id: number;
-  userId: number;
-  username: string;
-  email: string;
-  status: string;   // 'Pending' | 'Approved' | 'Rejected'
-  requestedAt: string;
-  reviewedAt?: string | null;
-}
 
 // ── Audit Log Search ──────────────────────────────
 

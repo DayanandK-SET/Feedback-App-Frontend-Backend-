@@ -11,14 +11,12 @@ namespace Feedback_Generation_App.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
-        private readonly ICreatorRequestService _creatorRequestService;
 
         public AdminController(
-            IAdminService adminService,
-            ICreatorRequestService creatorRequestService)
+            IAdminService adminService)
         {
             _adminService = adminService;
-            _creatorRequestService = creatorRequestService;
+
         }
 
         // ── Existing GET endpoints — NOT touched ──────────────────
@@ -87,31 +85,5 @@ namespace Feedback_Generation_App.Controllers
             return Ok(result);
         }
 
-        // ── Creator Requests ──────────────────────────────────────
-
-        // GET /api/Admin/creator-requests/pending
-        [HttpGet("creator-requests/pending")]
-        public async Task<IActionResult> GetPendingCreatorRequests()
-        {
-            var result = await _creatorRequestService.GetPendingRequestsAsync();
-            return Ok(result);
-        }
-
-        // GET /api/Admin/creator-requests
-        [HttpGet("creator-requests")]
-        public async Task<IActionResult> GetAllCreatorRequests()
-        {
-            var result = await _creatorRequestService.GetAllRequestsAsync();
-            return Ok(result);
-        }
-
-        // PATCH /api/Admin/creator-requests/{id}/review
-        [HttpPatch("creator-requests/{id}/review")]
-        public async Task<IActionResult> ReviewCreatorRequest(
-            int id, [FromBody] ReviewCreatorRequestDto dto)
-        {
-            await _creatorRequestService.ReviewRequestAsync(id, dto);
-            return Ok(new { Message = dto.Approve ? "Creator request approved" : "Creator request rejected" });
-        }
     }
 }
