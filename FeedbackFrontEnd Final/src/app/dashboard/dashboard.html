@@ -356,7 +356,13 @@
 
       <div class="form-group">
         <label>Expiry Date <span class="hint">(optional)</span></label>
-        <input type="datetime-local" class="form-input" [(ngModel)]="importExpireAt">
+        <!-- <input type="datetime-local" class="form-input" [(ngModel)]="importExpireAt"> -->
+        <input
+  type="datetime-local"
+  class="form-input"
+  [(ngModel)]="importExpireAt"
+  [min]="minExpiryDate"
+>
         <p class="field-hint">Survey stops accepting responses after this date</p>
       </div>
 
@@ -366,6 +372,54 @@
                placeholder="e.g. 100" min="1">
         <p class="field-hint">Automatically closes after this many responses</p>
       </div>
+
+      <!-- Private Survey Toggle -->
+      <div class="form-group private-toggle-group">
+        <div class="private-toggle-header">
+          <div>
+            <label class="private-label">🔒 Private Survey</label>
+            <p class="field-hint">Only invited participants can respond via OTP</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="importIsPrivate" (ngModelChange)="onImportPrivateToggle()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Participant Emails (shown only when private) -->
+      @if (importIsPrivate) {
+        <div class="form-group participant-section">
+          <label>Participant Emails <span class="required">*</span></label>
+          <textarea
+            class="form-input"
+            rows="4"
+            [(ngModel)]="importParticipantEmailsInput"
+            placeholder="Enter emails separated by commas, semicolons, or new lines&#10;e.g.&#10;alice@example.com&#10;bob@example.com"
+          ></textarea>
+          <p class="field-hint">Separate multiple emails with commas, semicolons, or new lines</p>
+
+          <button class="btn-parse-emails" type="button" (click)="parseImportEmails()">
+            ✅ Validate & Add Emails
+          </button>
+
+          @if (importEmailError) {
+            <div class="email-error">⚠️ {{ importEmailError }}</div>
+          }
+
+          @if (importParticipantEmails.length > 0) {
+            <div class="email-chips">
+              @for (email of importParticipantEmails; track email) {
+                <span class="email-chip">
+                  {{ email }}
+                  <button type="button" class="chip-remove" (click)="removeImportEmail(email)">✕</button>
+                </span>
+              }
+            </div>
+            <p class="email-count">{{ importParticipantEmails.length }} participant(s) added</p>
+          }
+        </div>
+      }
 
       <div class="form-group">
         <label>Excel File <span class="required">*</span></label>

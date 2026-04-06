@@ -5,7 +5,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SurveyService } from '../Services/survey.service';
 import {
   SurveyResponsesDto,
-  ResponseDto,
   GetSurveyResponsesRequestDto,
   QuestionType
 } from '../models/survey.models';
@@ -33,7 +32,6 @@ export class SurveyResponses {
   //  Filters 
   fromDate = '';
   toDate = '';
-  questionTypeFilter: QuestionType | '' = '';
 
   //  Pagination 
   pageNumber = 1;
@@ -62,7 +60,6 @@ export class SurveyResponses {
       pageSize: this.pageSize,
       fromDate: this.fromDate || null,
       toDate: this.toDate || null,
-      questionType: this.questionTypeFilter !== '' ? this.questionTypeFilter : null
     };
 
     this.surveyService.getSurveyResponses(this.surveyId, request).subscribe({
@@ -86,14 +83,13 @@ export class SurveyResponses {
   clearFilters() {
     this.fromDate = '';
     this.toDate = '';
-    this.questionTypeFilter = '';
     this.pageNumber = 1;
     this.expandedIds.clear();
     this.loadResponses();
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.fromDate || this.toDate || this.questionTypeFilter !== '');
+    return !!(this.fromDate || this.toDate );
   }
 
   //  Pagination 

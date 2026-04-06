@@ -10,6 +10,7 @@ import {
   GetMySurveysRequestDto,
   PagedSurveyResponseDto
 } from '../models/survey.models';
+import { parseAndValidateEmails } from '../utils/email-validator';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,6 +19,17 @@ import {
   styleUrl: './dashboard.css'
 })
 export class Dashboard {
+
+      minExpiryDate = '';
+
+
+  ngOnInit() {
+    const now = new Date();
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+
+    this.minExpiryDate = now.toISOString().slice(0, 16);
+  }
 
   private surveyService = inject(SurveyService);
 
@@ -42,7 +54,7 @@ export class Dashboard {
   isActiveFilter: boolean | null = null;
 
   // ── Applied Filters (only update on Apply click) ──
-  // ✅ FIX: tags only show after Apply, not on dropdown change
+  // tags only show after Apply, not on dropdown change
   appliedFromDate = '';
   appliedToDate = '';
   appliedIsActiveFilter: boolean | null = null;
@@ -55,7 +67,6 @@ export class Dashboard {
   // ── Edit ──────────────────────────────────────────
   showEditModal = signal(false);
   editingSurvey = signal<CreatorSurveyListDto | null>(null);
-  // ✅ Extended to include expireAt and maxResponses
   editForm: {
     title: string;
     description: string;
@@ -83,6 +94,12 @@ export class Dashboard {
   importError = signal('');
   importSuccess = signal('');
 
+  // Import — private survey
+  importIsPrivate = false;
+  importParticipantEmailsInput = '';
+  importParticipantEmails: string[] = [];
+  importEmailError = '';
+
   constructor() {
     this.loadSurveys();
   }
@@ -101,7 +118,7 @@ export class Dashboard {
     return Math.min(this.pageNumber * this.pageSize, this.totalCount());
   }
 
-  // ✅ FIX: hasActiveFilters now based on APPLIED values, not live values
+  // hasActiveFilters now based on APPLIED values, not live values
   get hasActiveFilters(): boolean {
     return !!(this.appliedFromDate || this.appliedToDate || this.appliedIsActiveFilter !== null);
   }
@@ -143,7 +160,7 @@ export class Dashboard {
   // ── Filter actions ────────────────────────────────
 
   applyFilters() {
-    // ✅ FIX: copy live values to applied values only on Apply click
+    // copy live values to applied values only on Apply click
     this.appliedFromDate = this.fromDate;
     this.appliedToDate = this.toDate;
     this.appliedIsActiveFilter = this.isActiveFilter;
@@ -255,7 +272,7 @@ export class Dashboard {
     this.editingSurvey.set(survey);
     this.editError.set('');
 
-    // ✅ Pre-populate all fields including expireAt and maxResponses
+    // Pre-populate all fields including expireAt and maxResponses
     // datetime-local input needs format "yyyy-MM-ddTHH:mm" so we slice to 16 chars
     this.editForm = {
       title: survey.title,
@@ -282,7 +299,7 @@ export class Dashboard {
     this.isEditLoading.set(true);
     this.editError.set('');
 
-    // ✅ Build the DTO — convert expireAt string back to ISO format for backend
+    // Build the DTO — convert expireAt string back to ISO format for backend
     const dto: UpdateSurveyDto = {
       title: this.editForm.title,
       description: this.editForm.description,
@@ -320,7 +337,8 @@ export class Dashboard {
   // ── Copy Public Link ──────────────────────────────
 
   copyPublicLink(survey: CreatorSurveyListDto) {
-    const link = `http://localhost:4200/survey/${survey.publicIdentifier}`;
+    const base = `http://localhost:4200/survey/${survey.publicIdentifier}`;
+    const link = survey.isPrivate ? `${base}/verify` : base;
     navigator.clipboard.writeText(link).then(() => {
       this.copiedId.set(survey.surveyId);
       setTimeout(() => this.copiedId.set(null), 2000);
@@ -336,9 +354,75 @@ export class Dashboard {
     this.importFileName = '';
     this.importExpireAt = '';
     this.importMaxResponses = null;
+    this.importIsPrivate = false;
+    this.importParticipantEmailsInput = '';
+    this.importParticipantEmails = [];
+    this.importEmailError = '';
     this.importError.set('');
     this.importSuccess.set('');
     this.showImportModal.set(true);
+  }
+
+  onImportPrivateToggle() {
+    if (!this.importIsPrivate) {
+      this.importParticipantEmailsInput = '';
+      this.importParticipantEmails = [];
+      this.importEmailError = '';
+    }
+  }
+
+  parseImportEmails() {
+    const result = parseAndValidateEmails(this.importParticipantEmailsInput);
+    this.importEmailError = result.error;
+    if (!result.error) {
+      this.importParticipantEmails = result.emails;
+    }
+  }
+
+  removeImportEmail(email: string) {
+    this.importParticipantEmails = this.importParticipantEmails.filter(e => e !== email);
+    this.importParticipantEmailsInput = this.importParticipantEmails.join('\n');
+  }
+
+  buildImportInvitationEmail(): string {
+    const title = this.importTitle.trim();
+    return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0; }
+  .wrapper { max-width: 560px; margin: 32px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+  .header  { background: #1a1a2e; padding: 28px 32px; text-align: center; }
+  .header h1 { color: #7c83fd; margin: 0; font-size: 22px; }
+  .body    { padding: 32px; text-align: center; }
+  .icon    { font-size: 48px; margin-bottom: 16px; }
+  .heading { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+  .message { font-size: 15px; color: #374151; line-height: 1.6; margin-bottom: 28px; }
+  .survey-name { font-weight: 700; color: #7c83fd; }
+  .btn     { display: inline-block; background: #7c83fd; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; }
+  .note    { font-size: 12px; color: #9ca3af; margin-top: 20px; line-height: 1.5; }
+  .footer  { background: #f9fafb; padding: 16px 32px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #f3f4f6; }
+</style></head>
+<body>
+  <div class="wrapper">
+    <div class="header"><h1>📋 FeedbackApp</h1></div>
+    <div class="body">
+      <div class="icon">👋</div>
+      <div class="heading">You've been invited!</div>
+      <p class="message">
+        You are invited to complete the survey:<br>
+        <span class="survey-name">&quot;${title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}&quot;</span><br><br>
+        Please complete the survey at your earliest convenience.
+      </p>
+      <a href="SURVEY_LINK" class="btn">Access Survey</a>
+      <p class="note">
+        You will need to verify your email with a one-time password (OTP) to access the survey.<br>
+        If you did not expect this invitation, you can safely ignore this email.
+      </p>
+    </div>
+    <div class="footer">Sent by FeedbackApp &nbsp;·&nbsp; Do not reply to this email</div>
+  </div>
+</body>
+</html>`;
   }
 
   closeImportModal() {
@@ -375,10 +459,27 @@ export class Dashboard {
       return;
     }
 
+    if (this.importIsPrivate) {
+      this.parseImportEmails();
+      if (this.importEmailError) return;
+      if (this.importParticipantEmails.length === 0) {
+        this.importError.set('Please add at least one participant email for a private survey.');
+        return;
+      }
+    }
+
     this.isImporting.set(true);
 
     const expireAt = this.importExpireAt
       ? new Date(this.importExpireAt).toISOString()
+      : null;
+
+    const participantEmailsCsv = this.importIsPrivate
+      ? this.importParticipantEmails.join(',')
+      : null;
+
+    const invitationHtml = this.importIsPrivate
+      ? this.buildImportInvitationEmail()
       : null;
 
     this.surveyService.importSurveyFromExcel(
@@ -386,7 +487,10 @@ export class Dashboard {
       this.importDescription.trim(),
       this.importFile,
       expireAt,
-      this.importMaxResponses
+      this.importMaxResponses,
+      this.importIsPrivate,
+      participantEmailsCsv,
+      invitationHtml
     ).subscribe({
       next: () => {
         this.isImporting.set(false);
@@ -405,7 +509,7 @@ export class Dashboard {
     });
   }
 
-  // ── Download Excel Template ✅ NEW ────────────────
+  // ── Download Excel Template ────────────────
   // Generates a sample .xlsx file using SheetJS so users
   // know exactly how to format their questions file.
   // Requires: npm install xlsx

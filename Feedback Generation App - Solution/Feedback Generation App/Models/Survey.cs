@@ -17,7 +17,10 @@
 
         public int? MaxResponses { get; set; }
 
+        public bool IsPrivate { get; set; } = false;
+
         public ICollection<Question>? Questions { get; set; }
         public ICollection<Response>? Responses { get; set; }
+        public ICollection<SurveyParticipant>? Participants { get; set; }
     }
 }

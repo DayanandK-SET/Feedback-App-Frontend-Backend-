@@ -168,5 +168,15 @@ public class SurveyController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Creator,Admin")]
+    [HttpPost("{id}/send-analytics-email")]
+    public async Task<IActionResult> SendAnalyticsEmail(int id, [FromBody] SendAnalyticsEmailDto? dto)
+    {
+        var userId = int.Parse(
+            User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-}   
+        await _surveyService.SendAnalyticsEmailAsync(id, userId, dto?.Email, dto?.HtmlBody);
+
+        return Ok(new { Message = "Analytics report sent successfully." });
+    }
+}

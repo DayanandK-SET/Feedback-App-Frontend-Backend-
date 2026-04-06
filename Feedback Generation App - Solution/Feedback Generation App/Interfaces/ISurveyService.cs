@@ -25,5 +25,6 @@ namespace Feedback_Generation_App.Interfaces
 
         Task<List<ResponseTrendDto>> GetSurveyResponseTrendAsync(int surveyId, int userId);
 
+        Task SendAnalyticsEmailAsync(int surveyId, int userId, string? overrideEmail = null, string? htmlBody = null);
     }
 }

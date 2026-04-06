@@ -45,11 +45,17 @@
         <!-- Expiry Date -->
         <div class="form-group">
           <label>Expiry Date <span class="hint">(optional)</span></label>
-          <input
+          <!-- <input
             type="datetime-local"
             class="form-input"
             [(ngModel)]="expireAt"
-          >
+          > -->
+          <input
+  type="datetime-local"
+  class="form-input"
+  [(ngModel)]="expireAt"
+  [min]="minExpiryDate"
+>
           <p class="field-hint">Survey stops accepting responses after this date</p>
         </div>
 
@@ -65,6 +71,54 @@
           >
           <p class="field-hint">Automatically closes after this many responses</p>
         </div>
+
+        <!-- Private Survey Toggle -->
+        <div class="form-group private-toggle-group">
+          <div class="private-toggle-header">
+            <div>
+              <label class="private-label">🔒 Private Survey</label>
+              <p class="field-hint">Only invited participants can respond via OTP</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" [(ngModel)]="isPrivate" (ngModelChange)="onPrivateToggle()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Participant Emails (shown only when private) -->
+        @if (isPrivate) {
+          <div class="form-group participant-section">
+            <label>Participant Emails <span class="required">*</span></label>
+            <textarea
+              class="form-input"
+              rows="4"
+              [(ngModel)]="participantEmailsInput"
+              placeholder="Enter emails separated by commas, semicolons, or new lines&#10;e.g.&#10;alice@example.com&#10;bob@example.com"
+            ></textarea>
+            <p class="field-hint">Separate multiple emails with commas, semicolons, or new lines</p>
+
+            <button class="btn-parse-emails" type="button" (click)="parseEmails()">
+              ✅ Validate & Add Emails
+            </button>
+
+            @if (emailInputError) {
+              <div class="email-error">⚠️ {{ emailInputError }}</div>
+            }
+
+            @if (participantEmails.length > 0) {
+              <div class="email-chips">
+                @for (email of participantEmails; track email) {
+                  <span class="email-chip">
+                    {{ email }}
+                    <button type="button" class="chip-remove" (click)="removeEmail(email)">✕</button>
+                  </span>
+                }
+              </div>
+              <p class="email-count">{{ participantEmails.length }} participant(s) added</p>
+            }
+          </div>
+        }
 
       </div>
 
@@ -213,7 +267,12 @@
         </button>
 
         <p class="submit-hint">
-          Survey will be created as <strong>Active</strong>. UnActivate it from the Dashboard when you to want.
+          Survey will be created as <strong>Active</strong>.
+          @if (isPrivate) {
+            Participants will receive an OTP via email to access it.
+          } @else {
+            UnActivate it from the Dashboard when you want.
+          }
         </p>
 
       </div>

@@ -32,6 +32,10 @@ namespace Feedback_Generation_App.Services
             if (survey == null)
                 return null;
 
+            // Private surveys cannot be accessed via the public endpoint
+            if (survey.IsPrivate)
+                throw new ForbiddenException("This is a private survey. Please use your invitation link and verify your OTP.");
+
             if (survey.ExpireAt.HasValue && survey.ExpireAt.Value < DateTime.UtcNow)
                 throw new BadRequestException("This survey has expired");
 
@@ -64,6 +68,10 @@ namespace Feedback_Generation_App.Services
 
             if (survey == null)
                 throw new BadRequestException("Survey not available");
+
+            // Block private surveys from public submission endpoint
+            if (survey.IsPrivate)
+                throw new ForbiddenException("This is a private survey. Please verify your OTP to submit.");
 
             // Response limit check
             if (survey.MaxResponses.HasValue)

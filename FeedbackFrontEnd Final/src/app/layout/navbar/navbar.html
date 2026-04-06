@@ -1,24 +1,3 @@
-<!-- <nav class="navbar">
-
-  <div class="navbar-left">
-    <button class="hamburger" (click)="toggleMenu()">☰</button>
-    <div class="logo">FeedbackApp</div>
-  </div>
-
-  <ul class="nav-links" [class.open]="menuOpen()">
-    <li><a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a></li>
-    <li><a routerLink="/create-survey" routerLinkActive="active-link">Create Survey</a></li>
-    <li><a routerLink="/question-bank" routerLinkActive="active-link">Question Bank</a></li>
-  </ul>
-
-  <div class="user-section">
-    <span class="welcome" style="font-size: 15px;color: whitesmoke;">Welcome, {{ username() }}</span>
-    <button class="logout" (click)="logout()">Logout</button>
-  </div>
-
-</nav> -->
-
-
 <nav class="navbar">
 
   <div class="navbar-left">
@@ -29,15 +8,20 @@
   <ul class="nav-links" [class.open]="menuOpen()">
 
     <!-- Creator + Admin links -->
-    <li><a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a></li>
-    <li><a routerLink="/create-survey" routerLinkActive="active-link">Create Survey</a></li>
-    <li><a routerLink="/question-bank" routerLinkActive="active-link">Question Bank</a></li>
+    <li *ngIf="isCreatorOrAdmin"><a routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a></li>
+    <li *ngIf="isCreatorOrAdmin"><a routerLink="/create-survey" routerLinkActive="active-link">Create Survey</a></li>
+    <li *ngIf="isCreatorOrAdmin"><a routerLink="/question-bank" routerLinkActive="active-link">Question Bank</a></li>
 
     <!-- Admin-only link -->
     <li *ngIf="isAdmin">
       <a routerLink="/admin" routerLinkActive="active-link" class="admin-link">
         ⚙️ Admin
       </a>
+    </li>
+
+    <!-- User-only link -->
+    <li *ngIf="isUser">
+      <a routerLink="/user-dashboard" routerLinkActive="active-link">My Dashboard</a>
     </li>
 
   </ul>

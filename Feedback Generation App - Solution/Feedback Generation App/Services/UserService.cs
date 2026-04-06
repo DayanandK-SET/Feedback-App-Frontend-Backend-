@@ -1,4 +1,5 @@
 ﻿using Feedback_Generation_App.Exceptions;
+using Feedback_Generation_App.Helpers;
 using Feedback_Generation_App.Interfaces;
 using Feedback_Generation_App.Models;
 using Feedback_Generation_App.Models.DTOs;
@@ -54,6 +55,10 @@ namespace Feedback_Generation_App.Services
 
         public async Task RegisterUser(RegisterUserDto request)
         {
+            // Validate email format before anything else
+            if (!EmailHelper.IsValidEmail(request.Email))
+                throw new BadRequestException("Please enter a valid email address.");
+
             var existingUser = await _userRepository.GetQueryable()
                 .AnyAsync(u => u.Username == request.Username);
 
@@ -69,7 +74,7 @@ namespace Feedback_Generation_App.Services
                 Email = request.Email,
                 Password = hashedPassword,
                 PasswordHash = hashKey,
-                Role = "Creator"
+                Role = "User"   // Default role; submit a CreatorRequest to become Creator
             };
 
             await _userRepository.AddAsync(user);

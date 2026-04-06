@@ -96,6 +96,42 @@ namespace Feedback_Generation_App.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("Feedback_Generation_App.Models.CreatorRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CreatorRequests");
+                });
+
             modelBuilder.Entity("Feedback_Generation_App.Models.Log", b =>
                 {
                     b.Property<int>("Id")
@@ -339,6 +375,9 @@ namespace Feedback_Generation_App.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("MaxResponses")
                         .HasColumnType("int");
 
@@ -361,6 +400,50 @@ namespace Feedback_Generation_App.Migrations
                         .IsUnique();
 
                     b.ToTable("Surveys");
+                });
+
+            modelBuilder.Entity("Feedback_Generation_App.Models.SurveyParticipant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OTP")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("OTPExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SurveyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SurveyId", "Email")
+                        .IsUnique();
+
+                    b.ToTable("SurveyParticipants");
                 });
 
             modelBuilder.Entity("Feedback_Generation_App.Models.User", b =>
@@ -431,6 +514,17 @@ namespace Feedback_Generation_App.Migrations
                     b.Navigation("SelectedOption");
                 });
 
+            modelBuilder.Entity("Feedback_Generation_App.Models.CreatorRequest", b =>
+                {
+                    b.HasOne("Feedback_Generation_App.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Feedback_Generation_App.Models.Question", b =>
                 {
                     b.HasOne("Feedback_Generation_App.Models.Survey", "Survey")
@@ -497,6 +591,17 @@ namespace Feedback_Generation_App.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("Feedback_Generation_App.Models.SurveyParticipant", b =>
+                {
+                    b.HasOne("Feedback_Generation_App.Models.Survey", "Survey")
+                        .WithMany("Participants")
+                        .HasForeignKey("SurveyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Survey");
+                });
+
             modelBuilder.Entity("Feedback_Generation_App.Models.Question", b =>
                 {
                     b.Navigation("Answers");
@@ -516,6 +621,8 @@ namespace Feedback_Generation_App.Migrations
 
             modelBuilder.Entity("Feedback_Generation_App.Models.Survey", b =>
                 {
+                    b.Navigation("Participants");
+
                     b.Navigation("Questions");
 
                     b.Navigation("Responses");

@@ -18,7 +18,9 @@ namespace FeedbackBack_Unit_Tests
         private readonly IRepository<int, Survey> _surveyRepository;
         private readonly IRepository<int, QuestionBank> _bankRepository;
         private readonly IRepository<int, Response> _responseRepository;
-        private readonly IRepository<int, AuditLog> _auditLogRepository; 
+        private readonly IRepository<int, AuditLog> _auditLogRepository;
+        private readonly IRepository<int, User> _userRepository;
+        private readonly IRepository<int, SurveyParticipant> _participantRepository;
 
         public SurveyServiceTests()
         {
@@ -30,7 +32,9 @@ namespace FeedbackBack_Unit_Tests
             _surveyRepository = new Repository<int, Survey>(_context);
             _bankRepository = new Repository<int, QuestionBank>(_context);
             _responseRepository = new Repository<int, Response>(_context);
-            _auditLogRepository = new Repository<int, AuditLog>(_context); 
+            _auditLogRepository = new Repository<int, AuditLog>(_context);
+            _userRepository = new Repository<int, User>(_context);
+            _participantRepository = new Repository<int, SurveyParticipant>(_context);
         }
 
         // Creates a SurveyService with the given role (Creator or Admin)
@@ -51,12 +55,17 @@ namespace FeedbackBack_Unit_Tests
 
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
+            var mockEmail = new Mock<IEmailService>();
+
             return new SurveyService(
                 mockAccessor.Object,
                 _surveyRepository,
                 _bankRepository,
                 _responseRepository,
-                _auditLogRepository  
+                _auditLogRepository,
+                _userRepository,
+                mockEmail.Object,
+                _participantRepository
             );
         }
 

@@ -1,0 +1,192 @@
+<div class="survey-page">
+
+  <!-- Top bar -->
+  <div class="survey-topbar">
+    <div class="topbar-logo">🔒 FeedbackApp — Private Survey</div>
+  </div>
+
+  <div class="survey-container">
+
+    <!-- ══ STEP 1: EMAIL ENTRY ══ -->
+    @if (step() === 'email') {
+      <div class="otp-card">
+        <div class="otp-icon">📧</div>
+        <h2>Enter Your Email</h2>
+        <p class="otp-subtitle">
+          This is a private survey. Enter the email address you were invited with to receive your OTP.
+        </p>
+
+        <div class="form-group">
+          <input
+            type="email"
+            class="otp-input"
+            [(ngModel)]="email"
+            placeholder="your@email.com"
+            (keyup.enter)="sendOtp()"
+          >
+        </div>
+
+        @if (emailError()) {
+          <div class="otp-error">⚠️ {{ emailError() }}</div>
+        }
+
+        <button class="otp-btn" (click)="sendOtp()" [disabled]="isSendingOtp()">
+          @if (isSendingOtp()) { <span class="spinner-border spinner-border-sm me-2"></span>Sending OTP... }
+          @else { Send OTP }
+        </button>
+      </div>
+    }
+
+    <!-- ══ STEP 2: OTP VERIFICATION ══ -->
+    @if (step() === 'otp') {
+      <div class="otp-card">
+        <div class="otp-icon">🔑</div>
+        <h2>Enter OTP</h2>
+        <p class="otp-subtitle">
+          A 6-digit OTP has been sent to <strong>{{ email }}</strong>.<br>
+          It expires in 10 minutes.
+        </p>
+
+        <div class="form-group">
+          <input
+            type="text"
+            class="otp-input otp-code-input"
+            [(ngModel)]="otp"
+            placeholder="Enter 6-digit OTP"
+            maxlength="6"
+            (keyup.enter)="verifyOtp()"
+          >
+        </div>
+
+        @if (otpError()) {
+          <div class="otp-error">⚠️ {{ otpError() }}</div>
+        }
+
+        @if (resendSuccess()) {
+          <div class="otp-success">✅ {{ resendSuccess() }}</div>
+        }
+
+        <button class="otp-btn" (click)="verifyOtp()" [disabled]="isVerifying()">
+          @if (isVerifying()) { <span class="spinner-border spinner-border-sm me-2"></span>Verifying... }
+          @else { Verify OTP }
+        </button>
+
+        <div class="otp-resend">
+          Didn't receive it?
+          <button class="resend-link" (click)="resendOtp()" [disabled]="isResending()">
+            @if (isResending()) { Resending... } @else { Resend OTP }
+          </button>
+        </div>
+
+        <button class="back-link-btn" (click)="step.set('email')">← Change email</button>
+      </div>
+    }
+
+    <!-- ══ LOADING SURVEY ══ -->
+    @if (surveyLoading()) {
+      <div class="center-state">
+        <div class="spinner-border text-primary"></div>
+        <p>Loading survey...</p>
+      </div>
+    }
+
+    @if (surveyError()) {
+      <div class="state-card error-card">
+        <div class="state-icon">⚠️</div>
+        <h2>Error</h2>
+        <p>{{ surveyError() }}</p>
+      </div>
+    }
+
+    <!-- ══ STEP 3: SURVEY FORM ══ -->
+    @if (step() === 'survey' && survey()) {
+      <div class="survey-header">
+        <h1 class="survey-title">{{ survey()!.title }}</h1>
+        <p class="survey-desc" *ngIf="survey()!.description">{{ survey()!.description }}</p>
+        <div class="q-count-badge">{{ survey()!.questions.length }} question(s)</div>
+      </div>
+
+      @for (question of survey()!.questions; track question.questionId; let i = $index) {
+        <div class="question-card" [class.has-error]="isUnanswered(question.questionId)">
+          <div class="q-header">
+            <span class="q-num">{{ i + 1 }}</span>
+            <div class="q-meta">
+              <span class="q-type-tag">{{ getTypeName(question.questionType) }}</span>
+              <p class="q-text">{{ question.text }}</p>
+            </div>
+          </div>
+
+          @if (isUnanswered(question.questionId)) {
+            <div class="q-error">⚠️ This question is required.</div>
+          }
+
+          <!-- Text -->
+          @if (question.questionType === QuestionType.Text) {
+            <div class="answer-area">
+              <textarea class="text-input" rows="3" placeholder="Type your answer here..."
+                [value]="getTextAnswer(question.questionId)"
+                (input)="setTextAnswer(question.questionId, $any($event.target).value)">
+              </textarea>
+            </div>
+          }
+
+          <!-- Rating -->
+          @if (question.questionType === QuestionType.Rating) {
+            <div class="answer-area">
+              <div class="rating-row">
+                @for (n of ratingRange(); track n) {
+                  <button class="rating-btn" [class.selected]="getRatingAnswer(question.questionId) === n"
+                    (click)="setRating(question.questionId, n)" type="button">{{ n }}</button>
+                }
+              </div>
+              <div class="rating-labels-row"><span>Not satisfied</span><span>Very satisfied</span></div>
+              @if (getRatingAnswer(question.questionId) > 0) {
+                <div class="rating-selected-text">Your rating: <strong>{{ getRatingAnswer(question.questionId) }}</strong> / 10</div>
+              }
+            </div>
+          }
+
+          <!-- Multiple Choice -->
+          @if (question.questionType === QuestionType.MultipleChoice) {
+            <div class="answer-area">
+              <div class="options-list">
+                @for (option of question.options!; track option.optionId) {
+                  <label class="option-label" [class.selected]="getSelectedOption(question.questionId) === option.optionId">
+                    <input type="radio" [name]="'q_' + question.questionId" [value]="option.optionId"
+                      [checked]="getSelectedOption(question.questionId) === option.optionId"
+                      (change)="setSelectedOption(question.questionId, option.optionId)" class="radio-input">
+                    <span class="radio-custom"></span>
+                    <span class="option-text">{{ option.optionText }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (submitError()) {
+        <div class="submit-error">⚠️ {{ submitError() }}</div>
+      }
+
+      <div class="submit-area">
+        <button class="btn-submit" (click)="submitSurvey()" [disabled]="isSubmitting()" type="button">
+          @if (isSubmitting()) { <span class="spinner-border spinner-border-sm me-2"></span>Submitting... }
+          @else { Submit Response }
+        </button>
+        <p class="submit-note">Your response is linked to your email and cannot be changed after submission.</p>
+      </div>
+    }
+
+    <!-- ══ STEP 4: SUCCESS ══ -->
+    @if (step() === 'success') {
+      <div class="state-card success-card">
+        <div class="state-icon">🎉</div>
+        <h2>Thank You!</h2>
+        <p>Your response has been submitted successfully.</p>
+        <p class="state-hint">We appreciate you taking the time to share your feedback.</p>
+      </div>
+    }
+
+  </div>
+</div>

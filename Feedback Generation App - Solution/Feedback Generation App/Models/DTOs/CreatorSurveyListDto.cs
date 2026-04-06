@@ -12,6 +12,8 @@
         public bool IsLocked { get; set; }
         public string PublicIdentifier { get; set; } = string.Empty;
 
+        public bool IsPrivate { get; set; }
+
         public DateTime? ExpireAt { get; set; }
         public int? MaxResponses { get; set; }
     }

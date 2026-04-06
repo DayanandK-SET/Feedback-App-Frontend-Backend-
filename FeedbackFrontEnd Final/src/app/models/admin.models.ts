@@ -1,50 +1,3 @@
-// =============================================
-// ADMIN MODELS
-// =============================================
-
-// ---------- Creators ----------
-
-// export interface AdminCreatorDto {
-//   id: number;
-//   username: string;
-//   email: string;
-// }
-
-// // ---------- Surveys ----------
-
-// export interface AdminSurveyDto {
-//   id: number;
-//   title: string;
-//   isActive: boolean;
-//   creator: string;
-// }
-
-
-// export interface AdminCreatorDto {
-//   id: number;
-//   username: string;
-//   email: string;
-//   isActive: boolean;
-// }
-
-// export interface AdminSurveyDto {
-//   id: number;
-//   title: string;
-//   isActive: boolean;
-//   creator: string;
-// }
-
-
-// export interface AuditLogDto {
-//   id: number;
-//   action: string;
-//   surveyId: number;
-//   surveyTitle: string;
-//   performedBy: string;
-//   performedAt: string;
-// }
-
-
 export interface AdminCreatorDto {
   id: number;
   username: string;
@@ -102,4 +55,33 @@ export interface AdminSurveysPagedResponseDto {
   pageNumber: number;
   pageSize: number;
   surveys: AdminSurveyDto[];
+}
+
+// ── Creator Requests ──────────────────────────────
+
+export interface CreatorRequestDto {
+  id: number;
+  userId: number;
+  username: string;
+  email: string;
+  status: string;   // 'Pending' | 'Approved' | 'Rejected'
+  requestedAt: string;
+  reviewedAt?: string | null;
+}
+
+// ── Audit Log Search ──────────────────────────────
+
+export interface GetAuditLogsRequestDto {
+  pageNumber: number;
+  pageSize: number;
+  search?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+}
+
+export interface AuditLogsPagedResponseDto {
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  logs: AuditLogDto[];
 }

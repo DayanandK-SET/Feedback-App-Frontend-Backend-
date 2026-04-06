@@ -1,15 +1,15 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.InkML;
 using Feedback_Generation_App.Contexts;
 using Feedback_Generation_App.Exceptions;
+using Feedback_Generation_App.Helpers;
 using Feedback_Generation_App.Interfaces;
 using Feedback_Generation_App.Models;
 using Feedback_Generation_App.Models.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-
 namespace Feedback_Generation_App.Services
 {
     public class SurveyService : ISurveyService
@@ -20,6 +20,8 @@ namespace Feedback_Generation_App.Services
         private readonly IRepository<int, AuditLog> _auditLogRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IRepository<int, User> _userRepository;
+        private readonly IEmailService _emailService;
+        private readonly IRepository<int, SurveyParticipant> _participantRepository;
 
 
 
@@ -29,7 +31,9 @@ namespace Feedback_Generation_App.Services
     IRepository<int, QuestionBank> bankRepository,
     IRepository<int, Response> responsesRepository,
     IRepository<int, AuditLog> auditLogRepository,
-    IRepository<int, User> userRepository)   
+    IRepository<int, User> userRepository,
+    IEmailService emailService,
+    IRepository<int, SurveyParticipant> participantRepository)
         {
             _httpContextAccessor = httpContextAccessor;
             _surveyRepository = surveyRepository;
@@ -37,6 +41,8 @@ namespace Feedback_Generation_App.Services
             _responsesRepository = responsesRepository;
             _auditLogRepository = auditLogRepository;
             _userRepository = userRepository;
+            _emailService = emailService;
+            _participantRepository = participantRepository;
         }
 
 
@@ -56,7 +62,7 @@ namespace Feedback_Generation_App.Services
         public async Task<string> CreateSurvey(CreateSurveyDto dto, int creatorId)
         {
 
-            // ✅ NEW: Block inactive creators from creating surveys
+            // Block inactive creators from creating surveys
             var creator = await _userRepository.GetQueryable()
                 .FirstOrDefaultAsync(u => u.Id == creatorId);
 
@@ -75,7 +81,8 @@ namespace Feedback_Generation_App.Services
                 CreatedById = creatorId,
                 IsActive = true,
                 ExpireAt = dto.ExpireAt,
-                MaxResponses = dto.MaxResponses
+                MaxResponses = dto.MaxResponses,
+                IsPrivate = dto.IsPrivate
             };
 
             survey.Questions = new List<Question>();
@@ -128,9 +135,51 @@ namespace Feedback_Generation_App.Services
                 survey.Questions.Add(question);
             }
 
-            //_context.Surveys.Add(survey);
             await _surveyRepository.AddAsync(survey);
-            //await _context.SaveChangesAsync();
+
+
+            // If private: validate emails, save participants, send invitation emails
+            if (dto.IsPrivate && dto.ParticipantEmails != null && dto.ParticipantEmails.Any())
+            {
+                var distinctEmails = dto.ParticipantEmails
+                    .Select(e => e.Trim().ToLowerInvariant())
+                    .Distinct()
+                    .ToList();
+
+                // Validate all emails upfront using the shared helper
+                var invalidEmails = distinctEmails
+                    .Where(e => !Helpers.EmailHelper.IsValidEmail(e))
+                    .ToList();
+
+                if (invalidEmails.Any())
+                    throw new BadRequestException(
+                        $"Invalid email address(es): {string.Join(", ", invalidEmails)}");
+
+                var surveyLink = $"http://localhost:4200/survey/{survey.PublicIdentifier}/verify";
+
+                foreach (var email in distinctEmails)
+                {
+                    await _participantRepository.AddAsync(new SurveyParticipant
+                    {
+                        SurveyId = survey.Id,
+                        Email = email
+                    });
+
+                    // Send the invitation HTML built by the frontend
+                    if (!string.IsNullOrWhiteSpace(dto.InvitationHtmlBody))
+                    {
+                        try
+                        {
+                            var subject = $"You're invited to complete a survey: \"{survey.Title}\"";
+                            await _emailService.SendEmailAsync(email, subject, dto.InvitationHtmlBody, isHtml: true);
+                        }
+                        catch
+                        {
+                            // Don't block survey creation if one email fails
+                        }
+                    }
+                }
+            }
 
             return survey.PublicIdentifier;
         }
@@ -236,47 +285,6 @@ namespace Feedback_Generation_App.Services
 
 
 
-
-
-        //public async Task DeleteSurveyAsync(int surveyId, int userId)
-        //{
-        //    //var survey = await _context.Surveys
-        //    var survey = await _surveyRepository.GetQueryable()
-        //        .FirstOrDefaultAsync(s => s.Id == surveyId && !s.IsDeleted);
-
-        //    if (survey == null)
-        //        throw new NotFoundException("Survey not found");
-
-        //    if (!IsAdmin() && survey.CreatedById != userId)
-        //        throw new ForbiddenException("You do not own this survey");
-
-        //    survey.IsDeleted = true;
-        //    //await _context.SaveChangesAsync();
-
-        //    await _surveyRepository.UpdateAsync(surveyId, survey);
-        //}
-
-        //public async Task ToggleSurveyStatusAsync(int surveyId, int userId)
-        //{
-        //    //var survey = await _context.Surveys
-        //    var survey = await _surveyRepository.GetQueryable()
-        //        .FirstOrDefaultAsync(s => s.Id == surveyId && !s.IsDeleted);
-
-        //    if (survey == null)
-        //        throw new NotFoundException("Survey not found");
-
-        //    if (!IsAdmin() && survey.CreatedById != userId)
-        //        throw new ForbiddenException("You do not own this survey");
-
-        //    survey.IsActive = !survey.IsActive;
-        //    //await _context.SaveChangesAsync();
-
-        //    await _surveyRepository.UpdateAsync(survey.Id, survey);
-
-
-        //}
-
-
         public async Task ToggleSurveyStatusAsync(int surveyId, int userId)
         {
             var survey = await _surveyRepository.GetQueryable()
@@ -288,22 +296,6 @@ namespace Feedback_Generation_App.Services
             if (!IsAdmin() && survey.CreatedById != userId)
                 throw new ForbiddenException("You do not own this survey");
 
-            //if (!survey.IsActive) // means we are trying to ACTIVATE
-            //{
-            //    // Expiry check
-            //    if (survey.ExpireAt.HasValue && survey.ExpireAt.Value < DateTime.UtcNow)
-            //        throw new BadRequestException("Cannot activate an expired survey");
-
-            //    // Max responses check
-            //    if (survey.MaxResponses.HasValue)
-            //    {
-            //        var responseCount = survey.Responses?
-            //            .Count(r => !r.IsDeleted) ?? 0;
-
-            //        if (responseCount >= survey.MaxResponses.Value)
-            //            throw new BadRequestException("Cannot activate survey: max responses reached");
-            //    }
-            //}
 
             survey.IsActive = !survey.IsActive;
 
@@ -356,137 +348,6 @@ namespace Feedback_Generation_App.Services
                 PerformedAt = DateTime.UtcNow
             });
         }
-
-
-
-
-        //public async Task UpdateSurveyAsync(int surveyId, int userId, UpdateSurveyDto dto)
-        //{
-        //    //var survey = await _context.Surveys
-        //    var survey = await _surveyRepository.GetQueryable()
-        //        .FirstOrDefaultAsync(s => s.Id == surveyId && !s.IsDeleted);
-
-        //    if (survey == null)
-        //        throw new NotFoundException("Survey not found");
-
-        //    if (!IsAdmin() && survey.CreatedById != userId)
-        //        throw new ForbiddenException("You do not own this survey");
-
-        //    if (string.IsNullOrWhiteSpace(dto.Title))
-        //        throw new BadRequestException("Title is required");
-
-        //    survey.Title = dto.Title;
-        //    survey.Description = dto.Description;
-        //    survey.UpdatedAt = DateTime.UtcNow;
-
-        //    //await _context.SaveChangesAsync();
-        //    await _surveyRepository.UpdateAsync(surveyId, survey);
-        //}
-
-
-        //    public async Task<PagedSurveyResponseDto> GetCreatorSurveysAsync(
-        //int userId, GetMySurveysRequestDto request)
-        //    {
-        //        // Pagination
-        //        if (request.PageNumber < 1) request.PageNumber = 1;
-        //        if (request.PageSize < 1) request.PageSize = 10;
-
-        //        var now = DateTime.UtcNow;
-
-        //        // Base query (Only creator's surveys, excluded deleted)
-        //        var query = _surveyRepository.GetQueryable()
-        //            .Where(s => s.CreatedById == userId && !s.IsDeleted);
-
-        //        if (request.FromDate.HasValue)
-        //            query = query.Where(s => s.CreatedAt >= request.FromDate.Value);
-
-        //        if (request.ToDate.HasValue)
-        //            query = query.Where(s => s.CreatedAt <= request.ToDate.Value);
-
-        //        if (request.IsActive.HasValue)
-        //            query = query.Where(s => s.IsActive == request.IsActive.Value);
-
-        //        // Total surveys count 
-        //        var totalCount = await query.CountAsync();
-
-
-        //        int totalActiveSurveys = await query
-        //.CountAsync(s => s.IsActive);
-
-        //        // Total responses count
-        //        int totalResponsesCount = await query
-        //            .SelectMany(s => s.Responses)
-        //            .CountAsync(r => !r.IsDeleted);
-
-
-        //        // Get paginated surveys with responses
-        //        var surveys = await query
-        //            .Include(s => s.Responses)
-        //            .OrderByDescending(s => s.CreatedAt)
-        //            .Skip((request.PageNumber - 1) * request.PageSize)
-        //            .Take(request.PageSize)
-        //            .ToListAsync();
-
-        //        // Auto-deactivate logic
-        //        bool anyChanges = false;
-
-        //        foreach (var survey in surveys)
-        //        {
-        //            bool shouldDeactivate = false;
-
-        //            // Expiry check
-        //            if (survey.ExpireAt.HasValue && survey.ExpireAt.Value < now)
-        //                shouldDeactivate = true;
-
-        //            // Max response check
-        //            if (survey.MaxResponses.HasValue)
-        //            {
-        //                var count = survey.Responses?.Count(r => !r.IsDeleted) ?? 0;
-        //                if (count >= survey.MaxResponses.Value)
-        //                    shouldDeactivate = true;
-        //            }
-
-        //            // Apply change only if needed
-        //            if (shouldDeactivate && survey.IsActive)
-        //            {
-        //                survey.IsActive = false;
-        //                anyChanges = true;
-        //            }
-        //        }
-
-        //        // If any changes to DB
-        //        if (anyChanges)
-        //        {
-        //            foreach (var survey in surveys.Where(s => !s.IsActive))
-        //            {
-        //                await _surveyRepository.UpdateAsync(survey.Id, survey);
-        //            }
-        //        }
-
-
-        //        return new PagedSurveyResponseDto
-        //        {
-        //            TotalCount = totalCount,
-        //            PageNumber = request.PageNumber,
-        //            PageSize = request.PageSize,
-        //            TotalResponsesCount = totalResponsesCount,
-        //            TotalActiveSurveys = totalActiveSurveys,
-
-
-        //            Surveys = surveys.Select(s => new CreatorSurveyListDto
-        //            {
-        //                SurveyId = s.Id,
-        //                Title = s.Title,
-        //                Description = s.Description,
-        //                IsActive = s.IsActive,
-        //                CreatedAt = s.CreatedAt,
-        //                TotalResponses = s.Responses?.Count(r => !r.IsDeleted) ?? 0,
-        //                PublicIdentifier = s.PublicIdentifier
-        //            }).ToList()
-        //        };
-        //    }
-
-
 
         public async Task<PagedSurveyResponseDto> GetCreatorSurveysAsync(
     int userId, GetMySurveysRequestDto request)
@@ -584,6 +445,7 @@ namespace Feedback_Generation_App.Services
                     CreatedAt = s.CreatedAt,
                     TotalResponses = s.Responses?.Count(r => !r.IsDeleted) ?? 0,
                     PublicIdentifier = s.PublicIdentifier,
+                    IsPrivate = s.IsPrivate,
 
                     // flag for disabling the toggle button
                     IsLocked =
@@ -741,115 +603,31 @@ namespace Feedback_Generation_App.Services
             return stream.ToArray();
         }
 
-
-        //public async Task<string> ImportSurveyFromExcelAsync(
-        //    ImportSurveyExcelDto dto,
-        //    int creatorId)
-        //{
-        //    if (dto.File == null || dto.File.Length == 0)
-        //        throw new BadRequestException("Excel file is required");
-
-        //    var survey = new Survey
-        //    {
-        //        Title = dto.Title,
-        //        Description = dto.Description,
-        //        CreatedById = creatorId,
-        //        IsActive = true,
-        //        Questions = new List<Question>()
-        //    };
-
-        //    using var stream = new MemoryStream();
-        //    await dto.File.CopyToAsync(stream);
-
-        //    // Reset stream position
-        //    stream.Position = 0;
-
-        //    using var workbook = new XLWorkbook(stream);
-        //    var worksheet = workbook.Worksheet(1);
-
-        //    var rows = worksheet.RowsUsed().Skip(1);
-
-        //    foreach (var row in rows)
-        //    {
-        //        var questionText = row.Cell(1).GetString();
-        //        var questionTypeString = row.Cell(2).GetString();
-
-        //        if (string.IsNullOrWhiteSpace(questionText))
-        //            continue;
-
-        //        // Normalize question type (handles "Multiple Choice", spaces, etc.)
-        //        var normalizedType = questionTypeString
-        //                                .Replace(" ", "")
-        //                                .Trim();
-
-        //        if (!Enum.TryParse<QuestionType>(
-        //                normalizedType,
-        //                true,
-        //                out var questionType))
-        //        {
-        //            throw new BadRequestException(
-        //                $"Invalid QuestionType: {questionTypeString}");
-        //        }
-
-        //        var question = new Question
-        //        {
-        //            Text = questionText,
-        //            QuestionType = questionType,
-        //            Options = new List<QuestionOption>()
-        //        };
-
-        //        // Handle MultipleChoice options dynamically
-        //        if (questionType == QuestionType.MultipleChoice)
-        //        {
-        //            int lastColumn = row.LastCellUsed().Address.ColumnNumber;
-
-        //            for (int i = 3; i <= lastColumn; i++)
-        //            {
-        //                var option = row.Cell(i).GetString();
-
-        //                if (!string.IsNullOrWhiteSpace(option))
-        //                {
-        //                    question.Options.Add(new QuestionOption
-        //                    {
-        //                        OptionText = option
-        //                    });
-        //                }
-        //            }
-
-        //            // Ensure MultipleChoice has options
-        //            if (!question.Options.Any())
-        //            {
-        //                throw new BadRequestException(
-        //                    $"MultipleChoice question '{questionText}' must have options.");
-        //            }
-        //        }
-
-        //        survey.Questions.Add(question);
-        //    }
-
-        //    //_context.Surveys.Add(survey);
-        //    //await _context.SaveChangesAsync();
-        //    await _surveyRepository.AddAsync(survey);
-
-        //    return survey.PublicIdentifier;
-        //}
-
         public async Task<string> ImportSurveyFromExcelAsync(
     ImportSurveyExcelDto dto,
     int creatorId)
         {
+            var creator = await _userRepository.GetQueryable()
+    .FirstOrDefaultAsync(u => u.Id == creatorId);
+
+            if (creator == null || creator.IsDeleted)
+                throw new ForbiddenException(
+                    "Your account has been deactivated by the admin. You cannot create surveys.");
+
+
             if (dto.File == null || dto.File.Length == 0)
                 throw new BadRequestException("Excel file is required");
 
             var survey = new Survey
             {
-                Title = dto.Title,
+                Title       = dto.Title,
                 Description = dto.Description ?? string.Empty,
                 CreatedById = creatorId,
-                IsActive = true,
-                Questions = new List<Question>(),
-                ExpireAt = dto.ExpireAt,
-                MaxResponses = dto.MaxResponses
+                IsActive    = true,
+                Questions   = new List<Question>(),
+                ExpireAt    = dto.ExpireAt,
+                MaxResponses = dto.MaxResponses,
+                IsPrivate   = dto.IsPrivate
             };
 
             using var stream = new MemoryStream();
@@ -908,6 +686,46 @@ namespace Feedback_Generation_App.Services
 
             await _surveyRepository.AddAsync(survey);
 
+            // If private: parse, validate, save participants and send invitation emails
+            if (dto.IsPrivate && !string.IsNullOrWhiteSpace(dto.ParticipantEmailsCsv))
+            {
+                var distinctEmails = dto.ParticipantEmailsCsv
+                    .Split(new[] { ',', ';', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim().ToLowerInvariant())
+                    .Where(e => e.Length > 0)
+                    .Distinct()
+                    .ToList();
+
+                var invalidEmails = distinctEmails.Where(e => !EmailHelper.IsValidEmail(e)).ToList();
+                if (invalidEmails.Any())
+                    throw new BadRequestException(
+                        $"Invalid email address(es): {string.Join(", ", invalidEmails)}");
+
+                var surveyLink = $"http://localhost:4200/survey/{survey.PublicIdentifier}/verify";
+
+                foreach (var email in distinctEmails)
+                {
+                    await _participantRepository.AddAsync(new SurveyParticipant
+                    {
+                        SurveyId = survey.Id,
+                        Email    = email
+                    });
+
+                    if (!string.IsNullOrWhiteSpace(dto.InvitationHtmlBody))
+                    {
+                        try
+                        {
+                            var subject = $"You're invited to complete a survey: \"{survey.Title}\"";
+                            await _emailService.SendEmailAsync(email, subject, dto.InvitationHtmlBody, isHtml: true);
+                        }
+                        catch
+                        {
+                            // Don't block import if one email fails
+                        }
+                    }
+                }
+            }
+
             return survey.PublicIdentifier;
         }
 
@@ -947,6 +765,67 @@ namespace Feedback_Generation_App.Services
                 .ToList();
 
             return result;
+        }
+
+        public async Task SendAnalyticsEmailAsync(
+            int surveyId,
+            int userId,
+            string? overrideEmail = null,
+            string? htmlBody = null)
+        {
+            // 1. Validate survey exists and caller owns it
+            var survey = await _surveyRepository.GetQueryable()
+                .FirstOrDefaultAsync(s => s.Id == surveyId && !s.IsDeleted);
+
+            if (survey == null)
+                throw new NotFoundException("Survey not found");
+
+            if (!IsAdmin() && survey.CreatedById != userId)
+                throw new ForbiddenException("You do not own this survey");
+
+            // 2. Resolve the target email address
+            var creator = await _userRepository.GetQueryable()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (creator == null)
+                throw new NotFoundException("Creator not found");
+
+            var toEmail = !string.IsNullOrWhiteSpace(overrideEmail)
+                ? overrideEmail.Trim()
+                : creator.Email;
+
+            // 3. Use the HTML body provided by the frontend,
+            //    or fall back to a simple plain-text message
+            var emailBody = !string.IsNullOrWhiteSpace(htmlBody)
+                ? htmlBody
+                : $"Hi {creator.Username},\n\nPlease find attached the analytics report for \"{survey.Title}\".\n\nRegards,\nFeedbackApp";
+
+            bool isHtml = !string.IsNullOrWhiteSpace(htmlBody);
+
+            // 4. Generate the Excel attachment
+            var excelBytes = await ExportResponsesToExcelAsync(surveyId, userId);
+
+            // 5. Send the email - surface SMTP failures as a readable error
+            try
+            {
+                await _emailService.SendEmailWithAttachmentAsync(
+                    toEmail,
+                    $"Survey Analytics Report - {survey.Title}",
+                    emailBody,
+                    excelBytes,
+                    $"Survey_{surveyId}_Analytics.xlsx",
+                    isHtml: isHtml);
+            }
+            catch (System.Net.Mail.SmtpException ex)
+            {
+                throw new BadRequestException(
+                    $"Failed to send email to '{toEmail}'. SMTP error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                throw new BadRequestException(
+                    $"Failed to send email to '{toEmail}'. Error: {ex.Message}");
+            }
         }
     }
 }

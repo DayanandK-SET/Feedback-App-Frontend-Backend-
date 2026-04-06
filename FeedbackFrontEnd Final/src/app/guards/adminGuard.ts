@@ -13,9 +13,10 @@ export const adminGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Redirect creators to dashboard, unauthenticated to login
+  // Redirect to the correct dashboard based on role
   if (token) {
-    router.navigateByUrl('/dashboard');
+    if (role === 'User') router.navigateByUrl('/user-dashboard');
+    else router.navigateByUrl('/dashboard');
   } else {
     router.navigateByUrl('');
   }

@@ -85,6 +85,9 @@ builder.Services.AddScoped<IPublicSurveyService, PublicSurveyService>();
 builder.Services.AddScoped<QuestionBankService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IPrivateSurveyService, PrivateSurveyService>();
+builder.Services.AddScoped<ICreatorRequestService, CreatorRequestService>();
 
 // JWT Authentication
 

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PublicSurveyService } from '../Services/public-survey.service';
 import {
   PublicSurveyDto,
@@ -20,33 +20,41 @@ import { QuestionType } from '../models/survey.models';
 export class PublicSurvey {
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private publicSurveyService = inject(PublicSurveyService);
 
   QuestionType = QuestionType;
-
   publicIdentifier = '';
 
-  //  Page State 
   isLoading = signal(true);
   survey = signal<PublicSurveyDto | null>(null);
-  errorMessage = signal('');      // survey not found / expired / closed
+  errorMessage = signal('');
   alreadySubmitted = signal(false);
   submitSuccess = signal(false);
   isSubmitting = signal(false);
   submitError = signal('');
 
-  //  Answers map: questionId → answer value 
-  // text/rating   → string
-  // multipleChoice → number (selectedOptionId)
   answers: Map<number, string | number> = new Map();
-
-  // Track validation: which questions are unanswered after attempting submit
   unanswered = new Set<number>();
 
   constructor() {
     this.publicIdentifier = this.route.snapshot.paramMap.get('publicIdentifier') ?? '';
     this.checkAlreadySubmitted();
-    this.loadSurvey();
+
+    // First check if private — redirect to OTP page if so
+    this.publicSurveyService.checkIsPrivate(this.publicIdentifier).subscribe({
+      next: (res) => {
+        if (res.isPrivate) {
+          this.router.navigate(['/survey', this.publicIdentifier, 'verify'], { replaceUrl: true });
+        } else {
+          this.loadSurvey();
+        }
+      },
+      error: () => {
+        // If check fails just try loading normally
+        this.loadSurvey();
+      }
+    });
   }
 
   //  Duplicate Prevention 

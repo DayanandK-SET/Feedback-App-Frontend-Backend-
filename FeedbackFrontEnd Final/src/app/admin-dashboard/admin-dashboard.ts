@@ -3,10 +3,10 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AdminService } from '../Services/admin.service';
-import { AdminCreatorDto, AdminSurveyDto, AuditLogDto } from '../models/admin.models';
+import { AdminCreatorDto, AdminSurveyDto, AuditLogDto, CreatorRequestDto } from '../models/admin.models';
 import { TokenService } from '../Services/token.service';
 
-type ActiveTab = 'creators' | 'surveys' | 'auditLogs';
+type ActiveTab = 'creators' | 'surveys' | 'auditLogs' | 'approvals';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -73,18 +73,21 @@ export class AdminDashboard {
   surveyPage     = 1;
   surveyPageSize = 8;
 
-  // ── Audit Logs — unchanged, keep frontend filtering ──────────
-  auditLogs       = signal<AuditLogDto[]>([]);
+  // ── Audit Logs — now backend-driven with pagination + filters ──
+  auditLogs        = signal<AuditLogDto[]>([]);
   auditLogsLoading = signal(false);
   auditLogsError   = signal('');
+  auditTotalCount  = signal(0);
 
+  // Live filter inputs (bound to form fields)
   auditFromDateInput = '';
   auditToDateInput   = '';
   auditSearchInput   = '';
 
-  auditFromDate  = '';
-  auditToDate    = '';
-  auditLogSearch = '';
+  // Applied filters (only update on Apply click)
+  appliedAuditSearch   = '';
+  appliedAuditFromDate = '';
+  appliedAuditToDate   = '';
 
   auditLogPage     = 1;
   auditLogPageSize = 8;
@@ -97,6 +100,13 @@ export class AdminDashboard {
 
   // ── Admin info ────────────────────────────────────
   adminUsername = signal<string | null>(null);
+
+  // ── Creator Requests (Approvals) ──────────────────
+  creatorRequests = signal<CreatorRequestDto[]>([]);
+  requestsLoading = signal(false);
+  requestsError = signal('');
+  pendingCount = signal(0);
+  reviewingId = signal<number | null>(null);
 
   constructor() {
     this.adminUsername.set(this.tokenService.getUsername());
@@ -179,7 +189,7 @@ export class AdminDashboard {
     });
   }
 
-  // ══════════════════════════════════════════════════
+
   // SURVEYS — Backend calls
   // ══════════════════════════════════════════════════
 
@@ -241,15 +251,23 @@ export class AdminDashboard {
   }
 
   // ══════════════════════════════════════════════════
-  // AUDIT LOGS — unchanged, frontend filtering kept
+  // AUDIT LOGS — backend pagination + filtering
   // ══════════════════════════════════════════════════
 
   loadAuditLogs() {
     this.auditLogsLoading.set(true);
     this.auditLogsError.set('');
-    this.adminService.getAuditLogs().subscribe({
+
+    this.adminService.searchAuditLogs({
+      pageNumber: this.auditLogPage,
+      pageSize:   this.auditLogPageSize,
+      search:     this.appliedAuditSearch   || null,
+      fromDate:   this.appliedAuditFromDate || null,
+      toDate:     this.appliedAuditToDate   || null
+    }).subscribe({
       next: (data) => {
-        this.auditLogs.set(data);
+        this.auditLogs.set(data.logs);
+        this.auditTotalCount.set(data.totalCount);
         this.auditLogsLoading.set(false);
       },
       error: () => {
@@ -259,36 +277,39 @@ export class AdminDashboard {
     });
   }
 
-  get filteredAuditLogs(): AuditLogDto[] {
-    let logs = this.auditLogs();
+  applyAuditFilters() {
+    this.appliedAuditSearch   = this.auditSearchInput;
+    this.appliedAuditFromDate = this.auditFromDateInput;
+    this.appliedAuditToDate   = this.auditToDateInput;
+    this.auditLogPage = 1;
+    this.loadAuditLogs();
+  }
 
-    if (this.auditFromDate) {
-      const from = new Date(this.auditFromDate);
-      logs = logs.filter(l => new Date(l.performedAt) >= from);
-    }
-    if (this.auditToDate) {
-      const to = new Date(this.auditToDate);
-      to.setDate(to.getDate() + 1);
-      logs = logs.filter(l => new Date(l.performedAt) < to);
-    }
-    const q = this.auditLogSearch.toLowerCase().trim();
-    if (q) {
-      logs = logs.filter(l =>
-        l.performedBy.toLowerCase().includes(q) ||
-        l.surveyTitle.toLowerCase().includes(q) ||
-        l.action.toLowerCase().includes(q)
-      );
-    }
-    return logs;
+  clearAuditFilters() {
+    this.auditSearchInput   = '';
+    this.auditFromDateInput = '';
+    this.auditToDateInput   = '';
+    this.appliedAuditSearch   = '';
+    this.appliedAuditFromDate = '';
+    this.appliedAuditToDate   = '';
+    this.auditLogPage = 1;
+    this.loadAuditLogs();
+  }
+
+  onAuditSearchChange() {
+    // Live search — apply immediately without needing Apply button
+    this.appliedAuditSearch = this.auditSearchInput;
+    this.auditLogPage = 1;
+    this.loadAuditLogs();
   }
 
   get auditLogTotalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredAuditLogs.length / this.auditLogPageSize));
+    return Math.max(1, Math.ceil(this.auditTotalCount() / this.auditLogPageSize));
   }
 
+  // auditLogPagedItems is now just the current page from the backend
   get auditLogPagedItems(): AuditLogDto[] {
-    const start = (this.auditLogPage - 1) * this.auditLogPageSize;
-    return this.filteredAuditLogs.slice(start, start + this.auditLogPageSize);
+    return this.auditLogs();
   }
 
   get auditLogPageNumbers(): number[] {
@@ -296,29 +317,7 @@ export class AdminDashboard {
   }
 
   get hasAuditFilters(): boolean {
-    return !!(this.auditFromDate || this.auditToDate || this.auditLogSearch.trim());
-  }
-
-  applyAuditFilters() {
-    this.auditFromDate  = this.auditFromDateInput;
-    this.auditToDate    = this.auditToDateInput;
-    this.auditLogSearch = this.auditSearchInput;
-    this.auditLogPage   = 1;
-  }
-
-  clearAuditFilters() {
-    this.auditFromDateInput = '';
-    this.auditToDateInput   = '';
-    this.auditSearchInput   = '';
-    this.auditFromDate  = '';
-    this.auditToDate    = '';
-    this.auditLogSearch = '';
-    this.auditLogPage   = 1;
-  }
-
-  onAuditSearchChange() {
-    this.auditLogSearch = this.auditSearchInput;
-    this.auditLogPage   = 1;
+    return !!(this.appliedAuditSearch || this.appliedAuditFromDate || this.appliedAuditToDate);
   }
 
   // ── Tabs ──────────────────────────────────────────
@@ -328,6 +327,63 @@ export class AdminDashboard {
     if (tab === 'auditLogs' && this.auditLogs().length === 0 && !this.auditLogsLoading()) {
       this.loadAuditLogs();
     }
+    if (tab === 'approvals') {
+      this.loadCreatorRequests();
+    }
+  }
+
+  // ── Creator Requests ──────────────────────────────
+
+  loadCreatorRequests() {
+    this.requestsLoading.set(true);
+    this.requestsError.set('');
+    this.adminService.getAllCreatorRequests().subscribe({
+      next: (data) => {
+        this.creatorRequests.set(data);
+        this.pendingCount.set(data.filter(r => r.status === 'Pending').length);
+        this.requestsLoading.set(false);
+      },
+      error: () => {
+        this.requestsError.set('Failed to load creator requests.');
+        this.requestsLoading.set(false);
+      }
+    });
+  }
+
+  approveRequest(id: number) {
+    this.reviewingId.set(id);
+    this.adminService.reviewCreatorRequest(id, true).subscribe({
+      next: () => {
+        this.creatorRequests.update(list =>
+          list.map(r => r.id === id ? { ...r, status: 'Approved', reviewedAt: new Date().toISOString() } : r)
+        );
+        this.pendingCount.update(n => Math.max(0, n - 1));
+        this.reviewingId.set(null);
+        // Reload creators tab count
+        this.loadCreators();
+      },
+      error: () => this.reviewingId.set(null)
+    });
+  }
+
+  rejectRequest(id: number) {
+    this.reviewingId.set(id);
+    this.adminService.reviewCreatorRequest(id, false).subscribe({
+      next: () => {
+        this.creatorRequests.update(list =>
+          list.map(r => r.id === id ? { ...r, status: 'Rejected', reviewedAt: new Date().toISOString() } : r)
+        );
+        this.pendingCount.update(n => Math.max(0, n - 1));
+        this.reviewingId.set(null);
+      },
+      error: () => this.reviewingId.set(null)
+    });
+  }
+
+  getRequestStatusClass(status: string): string {
+    if (status === 'Approved') return 'status-approved';
+    if (status === 'Rejected') return 'status-rejected';
+    return 'status-pending';
   }
 
   // ── Delete modal (surveys) ────────────────────────

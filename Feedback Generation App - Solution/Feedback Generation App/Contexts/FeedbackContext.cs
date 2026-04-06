@@ -22,6 +22,9 @@ namespace Feedback_Generation_App.Contexts
 
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+        public DbSet<SurveyParticipant> SurveyParticipants => Set<SurveyParticipant>();
+        public DbSet<CreatorRequest> CreatorRequests => Set<CreatorRequest>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -114,6 +117,25 @@ namespace Feedback_Generation_App.Contexts
                 entity.Property(a => a.SurveyTitle).HasMaxLength(200);
                 entity.Property(a => a.PerformedBy).HasMaxLength(100);
             });
+
+            // SurveyParticipant → Survey (Many-to-One)
+            modelBuilder.Entity<SurveyParticipant>()
+                .HasOne(sp => sp.Survey)
+                .WithMany(s => s.Participants)
+                .HasForeignKey(sp => sp.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique: one participant email per survey
+            modelBuilder.Entity<SurveyParticipant>()
+                .HasIndex(sp => new { sp.SurveyId, sp.Email })
+                .IsUnique();
+
+            // CreatorRequest → User (Many-to-One)
+            modelBuilder.Entity<CreatorRequest>()
+                .HasOne(cr => cr.User)
+                .WithMany()
+                .HasForeignKey(cr => cr.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

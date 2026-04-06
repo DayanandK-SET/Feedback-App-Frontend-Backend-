@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { TokenService } from '../Services/token.service';
+import { isValidEmail } from '../utils/email-validator';
 
 @Component({
   selector: 'app-authentication',
@@ -27,7 +28,7 @@ export class Authentication {
   isLoginLoading: boolean = false;
   isRegisterLoading: boolean = false;
 
-  // ── Toast ✅ NEW ──────────────────────────────────
+  // Toast
   toastMessage = signal('');
   toastVisible = signal(false);
   toastType = signal<'success' | 'error'>('success');
@@ -41,20 +42,21 @@ export class Authentication {
     this.loginModel    = new LoginModel();
     this.registerModel = new RegisterModel();
 
-    // ✅ BACK BUTTON FIX: if a token already exists redirect away immediately
-    // so a logged-in user can never land on the login page
+    // BACK BUTTON FIX: if a token already exists redirect away immediately
     const token = this.tokenService.getToken();
     if (token) {
       const role = this.tokenService.getRole();
       if (role === 'Admin') {
         this.router.navigate(['/admin'], { replaceUrl: true });
+      } else if (role === 'User') {
+        this.router.navigate(['/user-dashboard'], { replaceUrl: true });
       } else {
         this.router.navigate(['/dashboard'], { replaceUrl: true });
       }
     }
   }
 
-  // ── Toast helper ──────────────────────────────────
+  //  Toast helper 
 
   private showToast(message: string, type: 'success' | 'error' = 'success') {
     this.toastMessage.set(message);
@@ -85,14 +87,15 @@ export class Authentication {
           if (response) {
             sessionStorage.setItem('token', response?.token);
 
-            // ✅ Toast instead of alert
             this.showToast('Login successful! Redirecting...');
 
-            // ✅ replaceUrl: true so back button cannot return to login page
+            // replaceUrl: true so back button cannot return to login page
             setTimeout(() => {
               const role = this.tokenService.getRole();
               if (role === 'Admin') {
                 this.router.navigate(['/admin'], { replaceUrl: true });
+              } else if (role === 'User') {
+                this.router.navigate(['/user-dashboard'], { replaceUrl: true });
               } else {
                 this.router.navigate(['/dashboard'], { replaceUrl: true });
               }
@@ -113,6 +116,13 @@ export class Authentication {
 
   register() {
     this.registerError = '';
+
+    // Validate email before hitting the API
+    if (!isValidEmail(this.registerModel.email.trim())) {
+      this.registerError = 'Please enter a valid email address.';
+      return;
+    }
+
     this.isRegisterLoading = true;
 
     this.apiAuthService.apiRegister(this.registerModel)
@@ -125,7 +135,7 @@ export class Authentication {
       .subscribe({
         next: (response: any) => {
           if (response) {
-            // ✅ Toast instead of alert, then redirect to login tab
+
             this.showToast('Registration successful! Please log in.');
             this.registerModel = new RegisterModel();
             this.activeTab = 'login';

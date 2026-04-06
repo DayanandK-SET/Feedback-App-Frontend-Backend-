@@ -11,12 +11,14 @@
         </span>
       </h1>
     </div>
-    <a
-      [routerLink]="['/surveys', surveyId, 'responses']"
-      class="btn-secondary-link"
-    >
-      📋 View Responses
-    </a>
+    <div class="header-actions">
+      <button class="btn-email-analytics" (click)="openEmailModal()" *ngIf="analytics()">
+        📧 Email Analytics
+      </button>
+      <a [routerLink]="['/surveys', surveyId, 'responses']" class="btn-secondary-link">
+        📋 View Responses
+      </a>
+    </div>
   </div>
 
   <!-- ── LOADING ───────────────────────────────────── -->
@@ -308,4 +310,61 @@
 
   </div>
 
+</div>
+
+
+<!-- ══ EMAIL ANALYTICS MODAL ══ -->
+<div class="modal-backdrop" *ngIf="showEmailModal()" (click)="closeEmailModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header-custom">
+      <div>
+        <h3>📧 Email Analytics Report</h3>
+        <p class="modal-subtitle">
+          We'll send a full analytics summary + Excel attachment to your email.
+        </p>
+      </div>
+      <button class="modal-close" (click)="closeEmailModal()">✕</button>
+    </div>
+
+    <div class="modal-body-custom">
+
+      <div class="form-group">
+        <label class="form-label">Send to email</label>
+        <input
+          type="email"
+          class="form-input"
+          [(ngModel)]="emailInput"
+          placeholder="Leave blank to use your registered email"
+        >
+        <p class="field-hint">
+          Enter any valid email address, or leave blank to send to your registered account email.
+        </p>
+      </div>
+
+      @if (emailError()) {
+        <div class="modal-alert error">⚠️ {{ emailError() }}</div>
+      }
+
+      @if (emailSuccess()) {
+        <div class="modal-alert success">✅ {{ emailSuccess() }}</div>
+      }
+
+    </div>
+
+    <div class="modal-footer-custom">
+      <button class="btn-modal-secondary" (click)="closeEmailModal()">Cancel</button>
+      <button
+        class="btn-modal-primary"
+        (click)="sendAnalyticsEmail()"
+        [disabled]="isSendingEmail()">
+        @if (isSendingEmail()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>Sending...
+        } @else {
+          📧 Send Report
+        }
+      </button>
+    </div>
+
+  </div>
 </div>

@@ -629,3 +629,126 @@
   .modal-footer-custom { flex-direction: column; align-items: stretch; }
   .footer-actions { justify-content: flex-end; }
 }
+
+/* ── PRIVATE SURVEY ──────────────────────────────── */
+
+.private-toggle-group {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.private-toggle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.private-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Reuse toggle-switch from admin dashboard style */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 24px;
+  transition: 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  left: 3px; bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider { background: #7c83fd; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* Participant section */
+.participant-section {
+  background: #f8f9ff;
+  border: 1px solid #e0e3ff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.btn-parse-emails {
+  margin-top: 8px;
+  padding: 7px 14px;
+  background: #7c83fd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-parse-emails:hover { background: #5c63d8; }
+
+.email-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.email-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ede9fe;
+  color: #5b21b6;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: #7c3aed;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  line-height: 1;
+}
+
+.chip-remove:hover { color: #dc2626; }
+
+.email-count {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
