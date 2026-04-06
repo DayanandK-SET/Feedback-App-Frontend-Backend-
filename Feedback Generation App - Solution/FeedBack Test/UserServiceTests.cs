@@ -10,10 +10,10 @@ using Moq;
 
 namespace FeedbackBack_Unit_Tests
 {
-
-    // Tests: RegisterUser, CheckUser
-    // Pattern: Real Repository + InMemory DB + Mock external services
-
+    /// <summary>
+    /// Tests for UserService: RegisterUser, CheckUser
+    /// Pattern: Real Repository + InMemory DB + Mocked external services
+    /// </summary>
     public class UserServiceTests
     {
         private readonly FeedbackContext _context;
@@ -22,179 +22,188 @@ namespace FeedbackBack_Unit_Tests
         private readonly Mock<ITokenService> _mockTokenService;
         private readonly UserService _userService;
 
-        // Constructor runs fresh before Every test (xUnit)
-        // Guid.NewGuid() ensures each test gets a completely clean DB
         public UserServiceTests()
         {
             var options = new DbContextOptionsBuilder<FeedbackContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-            _context = new FeedbackContext(options);
-            _userRepository = new Repository<int, User>(_context);
-
-            // Real PasswordService — no external dependencies
+            _context         = new FeedbackContext(options);
+            _userRepository  = new Repository<int, User>(_context);
             _passwordService = new PasswordService();
 
-            // Mock TokenService
             _mockTokenService = new Mock<ITokenService>();
             _mockTokenService
                 .Setup(ts => ts.CreateToken(It.IsAny<TokenPayloadDto>()))
                 .Returns("mock-jwt-token");
 
-            _userService = new UserService(
-                _userRepository,
-                _passwordService,
-                _mockTokenService.Object
-            );
+            _userService = new UserService(_userRepository, _passwordService, _mockTokenService.Object);
         }
 
-        // Helper 
-        // Registers a user and returns the saved entity from DB
-        private async Task<User> RegisterTestUser(
-            string username = "testuser",
-            string password = "Test@123")
+        // ── Helper ────────────────────────────────────────────────────────────
+
+        private async Task<User> RegisterTestUser(string username = "testuser", string password = "Test@123")
         {
             await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = username,
-                Email = $"{username}@test.com",
+                Email    = $"{username}@test.com",
                 Password = password
             });
-
-            return await _userRepository.GetQueryable()
-                .FirstAsync(u => u.Username == username);
+            return await _userRepository.GetQueryable().FirstAsync(u => u.Username == username);
         }
 
-
-        // RegisterUser Tests
+        // ── RegisterUser ──────────────────────────────────────────────────────
 
         [Fact]
         public async Task RegisterUser_ValidDto_UserSavedToDatabase()
         {
-            // Arrange
-            var dto = new RegisterUserDto
+            await _userService.RegisterUser(new RegisterUserDto
             {
-                Username = "newcreator",
-                Email = "newcreator@test.com",
+                Username = "newuser",
+                Email    = "newuser@test.com",
                 Password = "Test@123"
-            };
+            });
 
-            // Act
-            await _userService.RegisterUser(dto);
-
-            // Assert
             var user = await _userRepository.GetQueryable()
-                .FirstOrDefaultAsync(u => u.Username == "newcreator");
+                .FirstOrDefaultAsync(u => u.Username == "newuser");
 
             Assert.NotNull(user);
-            Assert.Equal("newcreator", user.Username);
-            Assert.Equal("newcreator@test.com", user.Email);
+            Assert.Equal("newuser", user!.Username);
+            Assert.Equal("newuser@test.com", user.Email);
         }
 
         [Fact]
-        public async Task RegisterUser_NewUser_RoleIsAlwaysCreator()
+        public async Task RegisterUser_NewUser_DefaultRoleIsUser()
         {
-            // Arrange
-            var dto = new RegisterUserDto
+            // After our change, default role is "User" (not "Creator")
+            await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = "rolecheck",
-                Email = "role@test.com",
+                Email    = "role@test.com",
                 Password = "Test@123"
-            };
+            });
 
-            // Act
-            await _userService.RegisterUser(dto);
-
-            // Assert — role must always be "Creator", never "Admin"
             var user = await _userRepository.GetQueryable()
                 .FirstAsync(u => u.Username == "rolecheck");
 
-            Assert.Equal("Creator", user.Role);
+            Assert.Equal("User", user.Role);
         }
 
         [Fact]
-        public async Task RegisterUser_NewUser_PasswordIsHashedNotPlainText()
+        public async Task RegisterUser_PasswordIsHashedNotStoredAsPlainText()
         {
-            // Arrange
-            var dto = new RegisterUserDto
+            await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = "hashuser",
-                Email = "hash@test.com",
+                Email    = "hash@test.com",
                 Password = "PlainTextPassword"
-            };
+            });
 
-            // Act
-            await _userService.RegisterUser(dto);
-
-            // Assert — stored password should NOT match raw string bytes
             var user = await _userRepository.GetQueryable()
                 .FirstAsync(u => u.Username == "hashuser");
 
             var plainBytes = System.Text.Encoding.UTF8.GetBytes("PlainTextPassword");
 
             Assert.False(user.Password.SequenceEqual(plainBytes),
-                "Password should be hashed, not stored as plain text");
+                "Password must be hashed, not stored as plain text");
             Assert.NotEmpty(user.PasswordHash);
         }
 
         [Fact]
-        public async Task RegisterUser_DuplicateUsername_ThrowsException()
+        public async Task RegisterUser_PasswordHashKeyIsStored()
         {
-            // Arrange — register first user
+            await RegisterTestUser("hashkeyuser");
+
+            var user = await _userRepository.GetQueryable()
+                .FirstAsync(u => u.Username == "hashkeyuser");
+
+            // PasswordHash (the HMAC key) must be non-empty so login can re-hash
+            Assert.NotNull(user.PasswordHash);
+            Assert.True(user.PasswordHash.Length > 0);
+        }
+
+        [Fact]
+        public async Task RegisterUser_DuplicateUsername_ThrowsBadRequestException()
+        {
             await RegisterTestUser("existinguser");
 
-            // Act & Assert — register same username again
             await Assert.ThrowsAsync<BadRequestException>(async () =>
                 await _userService.RegisterUser(new RegisterUserDto
                 {
                     Username = "existinguser",
-                    Email = "another@test.com",
+                    Email    = "another@test.com",
                     Password = "Test@123"
                 })
             );
         }
 
+        [Fact]
+        public async Task RegisterUser_InvalidEmail_ThrowsBadRequestException()
+        {
+            // Backend validates email format via EmailHelper
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await _userService.RegisterUser(new RegisterUserDto
+                {
+                    Username = "bademail",
+                    Email    = "not-an-email",
+                    Password = "Test@123"
+                })
+            );
+        }
 
-        // CheckUser Tests
+        [Fact]
+        public async Task RegisterUser_EmailWithConsecutiveDots_ThrowsBadRequestException()
+        {
+            await Assert.ThrowsAsync<BadRequestException>(async () =>
+                await _userService.RegisterUser(new RegisterUserDto
+                {
+                    Username = "dotuser",
+                    Email    = "bad..email@test.com",
+                    Password = "Test@123"
+                })
+            );
+        }
+
+        [Fact]
+        public async Task RegisterUser_TwoDifferentUsers_BothSavedSuccessfully()
+        {
+            await RegisterTestUser("user1");
+            await RegisterTestUser("user2");
+
+            var count = await _userRepository.GetQueryable().CountAsync();
+            Assert.Equal(2, count);
+        }
+
+        // ── CheckUser ─────────────────────────────────────────────────────────
 
         [Fact]
         public async Task CheckUser_ValidCredentials_ReturnsUsernameAndToken()
         {
-            // Arrange
             await RegisterTestUser("loginuser", "MyPass@123");
 
-            var request = new CheckUserRequestDto
+            var result = await _userService.CheckUser(new CheckUserRequestDto
             {
                 Username = "loginuser",
                 Password = "MyPass@123"
-            };
+            });
 
-            // Act
-            var result = await _userService.CheckUser(request);
-
-            // Assert
             Assert.NotNull(result);
             Assert.Equal("loginuser", result.Username);
             Assert.Equal("mock-jwt-token", result.Token);
         }
 
         [Fact]
-        public async Task CheckUser_ValidLogin_TokenServiceIsCalledOnce()
+        public async Task CheckUser_ValidLogin_TokenServiceCalledExactlyOnce()
         {
-            // Arrange
             await RegisterTestUser("tokenverify", "Test@123");
 
-            var request = new CheckUserRequestDto
+            await _userService.CheckUser(new CheckUserRequestDto
             {
                 Username = "tokenverify",
                 Password = "Test@123"
-            };
+            });
 
-            // Act
-            await _userService.CheckUser(request);
-
-            // Assert — token service must be called exactly once per login
             _mockTokenService.Verify(
                 ts => ts.CreateToken(It.IsAny<TokenPayloadDto>()),
                 Times.Once
@@ -202,46 +211,58 @@ namespace FeedbackBack_Unit_Tests
         }
 
         [Fact]
+        public async Task CheckUser_TokenPayloadContainsCorrectUserId()
+        {
+            await RegisterTestUser("payloaduser", "Test@123");
+
+            TokenPayloadDto? capturedPayload = null;
+            _mockTokenService
+                .Setup(ts => ts.CreateToken(It.IsAny<TokenPayloadDto>()))
+                .Callback<TokenPayloadDto>(p => capturedPayload = p)
+                .Returns("token");
+
+            await _userService.CheckUser(new CheckUserRequestDto
+            {
+                Username = "payloaduser",
+                Password = "Test@123"
+            });
+
+            Assert.NotNull(capturedPayload);
+            Assert.Equal("payloaduser", capturedPayload!.Username);
+            Assert.True(capturedPayload.UserId > 0);
+        }
+
+        [Fact]
         public async Task CheckUser_UsernameDoesNotExist_ThrowsUnAuthorizedException()
         {
-            // Arrange — no user registered
-            var request = new CheckUserRequestDto
-            {
-                Username = "ghostuser",
-                Password = "Test@123"
-            };
-
-            // Act & Assert
             await Assert.ThrowsAsync<UnAuthorizedException>(async () =>
-                await _userService.CheckUser(request)
+                await _userService.CheckUser(new CheckUserRequestDto
+                {
+                    Username = "ghostuser",
+                    Password = "Test@123"
+                })
             );
         }
 
         [Fact]
         public async Task CheckUser_WrongPassword_ThrowsUnAuthorizedException()
         {
-            // Arrange
             await RegisterTestUser("pwdtest", "CorrectPass@123");
 
-            var request = new CheckUserRequestDto
-            {
-                Username = "pwdtest",
-                Password = "WrongPass@999"
-            };
-
-            // Act & Assert
             await Assert.ThrowsAsync<UnAuthorizedException>(async () =>
-                await _userService.CheckUser(request)
+                await _userService.CheckUser(new CheckUserRequestDto
+                {
+                    Username = "pwdtest",
+                    Password = "WrongPass@999"
+                })
             );
         }
 
         [Fact]
-        public async Task CheckUser_WrongPassword_TokenServiceIsNeverCalled()
+        public async Task CheckUser_WrongPassword_TokenServiceNeverCalled()
         {
-            // Arrange
             await RegisterTestUser("notokentest", "CorrectPass@123");
 
-            // Act — wrong password
             try
             {
                 await _userService.CheckUser(new CheckUserRequestDto
@@ -252,10 +273,24 @@ namespace FeedbackBack_Unit_Tests
             }
             catch (UnAuthorizedException) { }
 
-            // Assert — token must NOT be created on failed login
             _mockTokenService.Verify(
                 ts => ts.CreateToken(It.IsAny<TokenPayloadDto>()),
                 Times.Never
+            );
+        }
+
+        [Fact]
+        public async Task CheckUser_CaseSensitiveUsername_WrongCaseThrowsUnauthorized()
+        {
+            await RegisterTestUser("CaseSensitive", "Test@123");
+
+            // Username lookup is exact — "casesensitive" != "CaseSensitive"
+            await Assert.ThrowsAsync<UnAuthorizedException>(async () =>
+                await _userService.CheckUser(new CheckUserRequestDto
+                {
+                    Username = "casesensitive",
+                    Password = "Test@123"
+                })
             );
         }
     }
