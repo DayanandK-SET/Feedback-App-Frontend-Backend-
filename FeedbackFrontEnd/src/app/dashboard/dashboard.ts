@@ -346,17 +346,19 @@ export class Dashboard {
   // }
 
   
-copyPublicLink(survey: CreatorSurveyListDto) {
-  if (!survey.publicLink) {
-    console.warn('Public link missing from API response');
-    return;
-  }
 
-  navigator.clipboard.writeText(survey.publicLink).then(() => {
+copyPublicLink(survey: CreatorSurveyListDto) {
+  const baseUrl = window.location.origin;
+  const link = survey.isPrivate
+    ? `${baseUrl}/survey/${survey.publicIdentifier}/verify`
+    : `${baseUrl}/survey/${survey.publicIdentifier}`;
+
+  navigator.clipboard.writeText(link).then(() => {
     this.copiedId.set(survey.surveyId);
     setTimeout(() => this.copiedId.set(null), 2000);
   });
 }
+
 
 
   // ── Import from Excel ─────────────────────────────

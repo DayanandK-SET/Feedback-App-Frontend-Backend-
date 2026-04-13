@@ -26,7 +26,7 @@ export interface CreateSurveyDto {
   isPrivate?: boolean;
   participantEmails?: string[];
   invitationHtmlBody?: string;
-    publicLink: string;   
+ 
 
 }
 
