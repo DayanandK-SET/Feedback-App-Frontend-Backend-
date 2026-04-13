@@ -10,10 +10,16 @@ using System.Security.Claims;
 public class SurveyController : ControllerBase
 {
     private readonly ISurveyService _surveyService;
+    
+private readonly IConfiguration _configuration;
 
-    public SurveyController(ISurveyService surveyService)
+
+    public SurveyController(ISurveyService surveyService, IConfiguration configuration)
     {
         _surveyService = surveyService;
+        
+    _configuration = configuration;
+
     }
 
     [Authorize(Roles = "Creator,Admin")]
@@ -26,11 +32,17 @@ public class SurveyController : ControllerBase
 
         var publicId = await _surveyService.CreateSurvey(dto, userId);
 
-        return Ok(new
-        {
-            Message = "Survey created successfully",
-            PublicLink = $"http://localhost:5215/api/Public/{publicId}"
-        });
+        
+    _configuration = configuration;
+
+
+
+return Ok(new
+{
+    Message = "Survey created successfully",
+    PublicLink = $"{frontendBaseUrl}/survey/{publicId}"
+});
+
     }
 
 
