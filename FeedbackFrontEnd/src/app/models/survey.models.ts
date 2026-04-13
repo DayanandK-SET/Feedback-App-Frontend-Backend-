@@ -51,6 +51,8 @@ export interface CreatorSurveyListDto {
   isPrivate?: boolean;
   expireAt?: string | null;
   maxResponses?: number | null;
+  
+  publicLink: string;   
 }
 
 //  My Surveys - POST filter request 

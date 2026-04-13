@@ -336,14 +336,28 @@ export class Dashboard {
 
   // ── Copy Public Link ──────────────────────────────
 
-  copyPublicLink(survey: CreatorSurveyListDto) {
-    const base = `http://localhost:4200/survey/${survey.publicIdentifier}`;
-    const link = survey.isPrivate ? `${base}/verify` : base;
-    navigator.clipboard.writeText(link).then(() => {
-      this.copiedId.set(survey.surveyId);
-      setTimeout(() => this.copiedId.set(null), 2000);
-    });
+  // copyPublicLink(survey: CreatorSurveyListDto) {
+  //   const base = `http://localhost:4200/survey/${survey.publicIdentifier}`;
+  //   const link = survey.isPrivate ? `${base}/verify` : base;
+  //   navigator.clipboard.writeText(link).then(() => {
+  //     this.copiedId.set(survey.surveyId);
+  //     setTimeout(() => this.copiedId.set(null), 2000);
+  //   });
+  // }
+
+  
+copyPublicLink(survey: CreatorSurveyListDto) {
+  if (!survey.publicLink) {
+    console.warn('Public link missing from API response');
+    return;
   }
+
+  navigator.clipboard.writeText(survey.publicLink).then(() => {
+    this.copiedId.set(survey.surveyId);
+    setTimeout(() => this.copiedId.set(null), 2000);
+  });
+}
+
 
   // ── Import from Excel ─────────────────────────────
 
