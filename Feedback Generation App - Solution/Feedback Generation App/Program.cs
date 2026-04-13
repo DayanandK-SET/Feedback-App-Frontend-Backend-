@@ -137,8 +137,6 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<FeedbackContext>();
     var passwordService = services.GetRequiredService<IPasswordService>();
 
-    context.Database.Migrate();
-
     if (!context.Users.Any(u => u.Role == "Admin"))
     {
         var hashedPassword = passwordService
@@ -150,8 +148,7 @@ using (var scope = app.Services.CreateScope())
             Email = "admin@system.com",
             Password = hashedPassword,
             PasswordHash = hashKey,
-            Role = "Admin",
-            IsActive = true
+            Role = "Admin"
         };
 
         context.Users.Add(adminUser);

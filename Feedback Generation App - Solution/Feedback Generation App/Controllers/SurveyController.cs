@@ -32,12 +32,13 @@ private readonly IConfiguration _configuration;
 
         var publicId = await _surveyService.CreateSurvey(dto, userId);
 
-        
-    _configuration = configuration;
+
+
+        var frontendBaseUrl = _configuration["Frontend:BaseUrl"];
 
 
 
-return Ok(new
+        return Ok(new
 {
     Message = "Survey created successfully",
     PublicLink = $"{frontendBaseUrl}/survey/{publicId}"
