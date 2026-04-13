@@ -20,10 +20,10 @@ namespace Feedback_Generation_App.Services
         private readonly IRepository<int, User> _userRepository;
         private readonly IEmailService _emailService;
         private readonly IRepository<int, SurveyParticipant> _participantRepository;
+        
+private readonly IConfiguration _configuration;
 
-
-
-        public SurveyService(
+public SurveyService(
     IHttpContextAccessor httpContextAccessor,
     IRepository<int, Survey> surveyRepository,
     IRepository<int, QuestionBank> bankRepository,
@@ -31,17 +31,20 @@ namespace Feedback_Generation_App.Services
     IRepository<int, AuditLog> auditLogRepository,
     IRepository<int, User> userRepository,
     IEmailService emailService,
-    IRepository<int, SurveyParticipant> participantRepository)
-        {
-            _httpContextAccessor = httpContextAccessor;
-            _surveyRepository = surveyRepository;
-            _bankRepository = bankRepository;
-            _responsesRepository = responsesRepository;
-            _auditLogRepository = auditLogRepository;
-            _userRepository = userRepository;
-            _emailService = emailService;
-            _participantRepository = participantRepository;
-        }
+    IRepository<int, SurveyParticipant> participantRepository,
+    IConfiguration configuration)
+{
+    _httpContextAccessor = httpContextAccessor;
+    _surveyRepository = surveyRepository;
+    _bankRepository = bankRepository;
+    _responsesRepository = responsesRepository;
+    _auditLogRepository = auditLogRepository;
+    _userRepository = userRepository;
+    _emailService = emailService;
+    _participantRepository = participantRepository;
+    _configuration = configuration;
+}
+
 
 
 
@@ -149,7 +152,10 @@ namespace Feedback_Generation_App.Services
                     throw new BadRequestException(
                         $"Invalid email address(es): {string.Join(", ", invalidEmails)}");
 
-                var surveyLink = $"http://localhost:4200/survey/{survey.PublicIdentifier}/verify";
+                
+var frontendBaseUrl = _configuration["Frontend:BaseUrl"];
+var surveyLink = $"{frontendBaseUrl}/survey/{survey.PublicIdentifier}/verify";
+
 
                 foreach (var email in distinctEmails)
                 {
