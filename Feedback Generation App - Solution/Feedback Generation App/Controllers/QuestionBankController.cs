@@ -3,7 +3,6 @@ using Feedback_Generation_App.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
 namespace Feedback_Generation_App.Controllers
 {
     [Route("api/[controller]")]
@@ -43,13 +42,39 @@ namespace Feedback_Generation_App.Controllers
             if (userIdClaim == null)
                 return Unauthorized("Invalid token");
 
-            var userId = int.Parse(userIdClaim.Value);
-
+            var userId  = int.Parse(userIdClaim.Value);
             var isAdmin = User.IsInRole("Admin");
 
             var result = await _service.GetMyQuestionsAsync(userId, isAdmin, request);
 
             return Ok(result);
+        }
+
+        // PUT /api/QuestionBank/{id}
+        // Creator and Admin can edit — but only their own questions (enforced in service)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateQuestion(
+            int id, [FromBody] UpdateQuestionBankDto dto)
+        {
+            var userId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            await _service.UpdateQuestionAsync(id, userId, dto);
+
+            return Ok(new { Message = "Question updated successfully." });
+        }
+
+        // DELETE /api/QuestionBank/{id}
+        // Creator and Admin can delete — but only their own questions (enforced in service)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteQuestion(int id)
+        {
+            var userId = int.Parse(
+                User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+            await _service.DeleteQuestionAsync(id, userId);
+
+            return Ok(new { Message = "Question deleted successfully." });
         }
     }
 }

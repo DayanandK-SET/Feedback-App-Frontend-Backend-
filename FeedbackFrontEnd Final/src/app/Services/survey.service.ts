@@ -3,7 +3,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   CreateSurveyDto,
   UpdateSurveyDto,
-  CreatorSurveyListDto,
   GetMySurveysRequestDto,
   PagedSurveyResponseDto,
   SurveyResponsesDto,

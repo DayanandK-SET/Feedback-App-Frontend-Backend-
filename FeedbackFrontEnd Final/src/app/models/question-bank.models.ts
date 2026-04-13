@@ -2,16 +2,22 @@
 
 import { QuestionType } from "./survey.models";
 
-
-//  Create 
+// Create
 
 export interface CreateQuestionBankDto {
   text: string;
   questionType: QuestionType;
-  options?: string[];   // Required if QuestionType = MultipleChoice
+  options?: string[];
 }
 
-//  Request (paginated + filtered) 
+// Update
+
+export interface UpdateQuestionBankDto {
+  text: string;
+  options?: string[];
+}
+
+// Request (paginated + filtered)
 
 export interface GetQuestionBankRequestDto {
   questionType?: QuestionType | null;
@@ -19,13 +25,14 @@ export interface GetQuestionBankRequestDto {
   pageSize?: number;
 }
 
-//  Response 
+// Response
 
 export interface QuestionBankResponseDto {
   id: number;
   text: string;
   questionType: QuestionType;
   options?: string[];
+  createdById: number;
 }
 
 export interface QuestionBankPagedResponseDto {

@@ -101,7 +101,7 @@ namespace Feedback_Generation_App.Middlewares
                 // If logging fails, we still return the error response to the client.
             }
 
-            // Response shape is unchanged from the original
+            // Response 
             var response = new
             {
                 success = false,

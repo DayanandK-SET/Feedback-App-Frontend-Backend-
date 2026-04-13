@@ -31,4 +31,11 @@ export class TokenService {
     return decoded?.role || null;
   }
 
+  getUserId(): number {
+    const decoded = this.getDecodedToken();
+    // .NET ClaimTypes.NameIdentifier maps to 'nameid' in JWT
+    const id = decoded?.nameid ?? decoded?.sub;
+    return id ? Number(id) : 0;
+  }
+
 }

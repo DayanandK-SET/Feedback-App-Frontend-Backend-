@@ -217,25 +217,41 @@ export class Analytics {
   }
 
   // Renders a bar chart row for each multiple choice option
-  private buildMultipleChoiceSection(q: QuestionAnalyticsDto): string {
-    if (!q.options || q.options.length === 0) return `<div class="no-data">No options.</div>`;
 
-    const totalVotes = q.options.reduce((sum, o) => sum + o.count, 0);
-    const maxVotes   = Math.max(...q.options.map(o => o.count), 1);
-
-    if (totalVotes === 0) return `<div class="no-data">No votes yet.</div>`;
-
-    return q.options.map(opt => {
-      const pct    = Math.round((opt.count / totalVotes) * 100);
-      const barPct = Math.round((opt.count / maxVotes) * 100);
-      return `
-        <div class="bar-row">
-          <div class="bar-label">${this.escapeHtml(opt.optionText)}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div>
-          <div class="bar-stat">${opt.count} (${pct}%)</div>
-        </div>`;
-    }).join('');
+private buildMultipleChoiceSection(q: QuestionAnalyticsDto): string {
+  if (!q.options || q.options.length === 0) {
+    return `<div class="no-data">No options.</div>`;
   }
+
+  const totalVotes = q.options.reduce(
+    (sum: number, o) => sum + o.count,
+    0
+  );
+
+  const maxVotes = Math.max(
+    ...q.options.map((o) => o.count),
+    1
+  );
+
+  if (totalVotes === 0) {
+    return `<div class="no-data">No votes yet.</div>`;
+  }
+
+  return q.options.map((opt) => {
+    const pct = Math.round((opt.count / totalVotes) * 100);
+    const barPct = Math.round((opt.count / maxVotes) * 100);
+
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${this.escapeHtml(opt.optionText)}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${barPct}%"></div>
+        </div>
+        <div class="bar-stat">${opt.count} (${pct}%)</div>
+      </div>`;
+  }).join('');
+}
+
 
   // Renders the average rating with min/max
   private buildRatingSection(q: QuestionAnalyticsDto): string {

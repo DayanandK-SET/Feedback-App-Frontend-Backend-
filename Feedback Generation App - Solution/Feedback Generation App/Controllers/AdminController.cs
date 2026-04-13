@@ -19,7 +19,7 @@ namespace Feedback_Generation_App.Controllers
 
         }
 
-        // ── Existing GET endpoints — NOT touched ──────────────────
+        // GET endpoints
 
         [HttpGet("creators")]
         public async Task<IActionResult> GetAllCreators()
@@ -56,7 +56,6 @@ namespace Feedback_Generation_App.Controllers
             return Ok(logs);
         }
 
-        // ── NEW: paged + filtered endpoints ──────────────────────
 
         // POST /api/Admin/creators/search
         [HttpPost("creators/search")]

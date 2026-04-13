@@ -126,31 +126,6 @@ app.UseCors();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<FeedbackContext>();
-    var passwordService = services.GetRequiredService<IPasswordService>();
-
-    if (!context.Users.Any(u => u.Role == "Admin"))
-    {
-        var hashedPassword = passwordService
-            .HashPassword("Admin@123", null, out byte[] hashKey);
-
-        var adminUser = new User
-        {
-            Username = "admin",
-            Email = "admin@system.com",
-            Password = hashedPassword,
-            PasswordHash = hashKey,
-            Role = "Admin"
-        };
-
-        context.Users.Add(adminUser);
-        context.SaveChanges();
-    }
-}
-
 app.UseAuthentication();
 app.UseAuthorization();
 

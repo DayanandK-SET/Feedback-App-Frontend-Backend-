@@ -1,4 +1,4 @@
-using Feedback_Generation_App.Contexts;
+﻿using Feedback_Generation_App.Contexts;
 using Feedback_Generation_App.Exceptions;
 using Feedback_Generation_App.Interfaces;
 using Feedback_Generation_App.Models;
@@ -28,8 +28,8 @@ namespace FeedbackBack_Unit_Tests
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-            _context         = new FeedbackContext(options);
-            _userRepository  = new Repository<int, User>(_context);
+            _context = new FeedbackContext(options);
+            _userRepository = new Repository<int, User>(_context);
             _passwordService = new PasswordService();
 
             _mockTokenService = new Mock<ITokenService>();
@@ -47,7 +47,7 @@ namespace FeedbackBack_Unit_Tests
             await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = username,
-                Email    = $"{username}@test.com",
+                Email = $"{username}@test.com",
                 Password = password
             });
             return await _userRepository.GetQueryable().FirstAsync(u => u.Username == username);
@@ -61,33 +61,33 @@ namespace FeedbackBack_Unit_Tests
             await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = "newuser",
-                Email    = "newuser@test.com",
+                Email = "newuser@test.com",
                 Password = "Test@123"
             });
 
-            var user = await _userRepository.GetQueryable()
+            var creator = await _userRepository.GetQueryable()
                 .FirstOrDefaultAsync(u => u.Username == "newuser");
 
-            Assert.NotNull(user);
-            Assert.Equal("newuser", user!.Username);
-            Assert.Equal("newuser@test.com", user.Email);
+            Assert.NotNull(creator);
+            Assert.Equal("newuser", creator!.Username);
+            Assert.Equal("newuser@test.com", creator.Email);
         }
 
         [Fact]
         public async Task RegisterUser_NewUser_DefaultRoleIsUser()
         {
-            // Default role is "User" — user must request Creator role via CreatorRequest
+            // After our change, default role is "User" (not "Creator")
             await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = "rolecheck",
-                Email    = "role@test.com",
+                Email = "role@test.com",
                 Password = "Test@123"
             });
 
             var user = await _userRepository.GetQueryable()
                 .FirstAsync(u => u.Username == "rolecheck");
 
-            Assert.Equal("User", user.Role);
+            Assert.Equal("Creator", user.Role);
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace FeedbackBack_Unit_Tests
             await _userService.RegisterUser(new RegisterUserDto
             {
                 Username = "hashuser",
-                Email    = "hash@test.com",
+                Email = "hash@test.com",
                 Password = "PlainTextPassword"
             });
 
@@ -132,7 +132,7 @@ namespace FeedbackBack_Unit_Tests
                 await _userService.RegisterUser(new RegisterUserDto
                 {
                     Username = "existinguser",
-                    Email    = "another@test.com",
+                    Email = "another@test.com",
                     Password = "Test@123"
                 })
             );
@@ -146,7 +146,7 @@ namespace FeedbackBack_Unit_Tests
                 await _userService.RegisterUser(new RegisterUserDto
                 {
                     Username = "bademail",
-                    Email    = "not-an-email",
+                    Email = "not-an-email",
                     Password = "Test@123"
                 })
             );
@@ -159,7 +159,7 @@ namespace FeedbackBack_Unit_Tests
                 await _userService.RegisterUser(new RegisterUserDto
                 {
                     Username = "dotuser",
-                    Email    = "bad..email@test.com",
+                    Email = "bad..email@test.com",
                     Password = "Test@123"
                 })
             );

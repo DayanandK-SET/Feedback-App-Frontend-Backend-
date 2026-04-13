@@ -1,6 +1,4 @@
 using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.InkML;
 using Feedback_Generation_App.Contexts;
 using Feedback_Generation_App.Exceptions;
 using Feedback_Generation_App.Helpers;
@@ -69,10 +67,6 @@ namespace Feedback_Generation_App.Services
             if (creator == null || creator.IsDeleted)
                 throw new ForbiddenException(
                     "Your account has been deactivated by the admin. You cannot create surveys.");
-
-
-
-
 
             var survey = new Survey
             {
@@ -209,7 +203,7 @@ namespace Feedback_Generation_App.Services
             if (request.PageSize < 1) request.PageSize = 10;
 
 
-            // The below line is for making Queryable
+            // making Queryable
 
             var responsesQuery = survey.Responses?
                 .Where(r => !r.IsDeleted)

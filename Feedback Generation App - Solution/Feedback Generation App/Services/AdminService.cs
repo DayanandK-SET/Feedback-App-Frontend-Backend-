@@ -136,7 +136,7 @@ namespace Feedback_Generation_App.Services
                 .ToListAsync();
         }
 
-        // ── NEW: Paged + filtered creators ───────────────────────
+        // Paged + filtered creators ───────────────────────
 
         public async Task<AdminCreatorsPagedResponseDto> SearchCreatorsAsync(
             GetAdminCreatorsRequestDto request)
@@ -193,7 +193,7 @@ namespace Feedback_Generation_App.Services
             };
         }
 
-        // ── NEW: Paged + filtered surveys ────────────────────────
+        // Paged + filtered surveys ────────────────────────
 
         public async Task<AdminSurveysPagedResponseDto> SearchSurveysAsync(
             GetAdminSurveysRequestDto request)
@@ -259,7 +259,7 @@ namespace Feedback_Generation_App.Services
             };
         }
 
-        // ── NEW: Paged + filtered audit logs ─────────────────────
+        // Paged + filtered audit logs ─────────────────────
 
         public async Task<AuditLogsPagedResponseDto> SearchAuditLogsAsync(
             GetAuditLogsRequestDto request)

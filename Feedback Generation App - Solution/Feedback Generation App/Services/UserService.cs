@@ -74,7 +74,7 @@ namespace Feedback_Generation_App.Services
                 Email = request.Email,
                 Password = hashedPassword,
                 PasswordHash = hashKey,
-                Role = "Creator"
+                Role = "Creator"   
             };
 
             await _userRepository.AddAsync(user);
