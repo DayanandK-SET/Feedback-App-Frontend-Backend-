@@ -171,7 +171,12 @@ var surveyLink = $"{frontendBaseUrl}/survey/{survey.PublicIdentifier}/verify";
                         try
                         {
                             var subject = $"You're invited to complete a survey: \"{survey.Title}\"";
-                            await _emailService.SendEmailAsync(email, subject, dto.InvitationHtmlBody, isHtml: true);
+
+
+                            var finalHtmlBody = dto.InvitationHtmlBody
+                                .Replace("SURVEY_LINK", survey.PublicIdentifier);
+
+                            await _emailService.SendEmailAsync(email, subject, finalHtmlBody, isHtml: true);
                         }
                         catch
                         {
