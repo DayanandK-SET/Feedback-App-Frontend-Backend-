@@ -222,7 +222,7 @@ buildInvitationEmail(publicLink: string): string {
         Please complete the survey at your earliest convenience.
       </p>
 
-      <a href="${publicLink}" class="btn">Access Survey</a>
+      <a href="__SURVEY_LINK__" class="btn">Access Survey</a>
 
       <p class="note">
         You will need to verify your email with a one-time password (OTP) to access the survey.<br/>
