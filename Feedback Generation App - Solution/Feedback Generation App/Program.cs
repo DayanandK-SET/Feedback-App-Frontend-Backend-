@@ -56,7 +56,9 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<FeedbackContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("Development")
+                //builder.Configuration.GetConnectionString("Development")
+                builder.Configuration.GetConnectionString("DefaultConnection")
+
     )
 );
 
@@ -131,29 +133,29 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<FeedbackContext>();
-    var passwordService = services.GetRequiredService<IPasswordService>();
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    var context = services.GetRequiredService<FeedbackContext>();
+//    var passwordService = services.GetRequiredService<IPasswordService>();
 
-    if (!context.Users.Any(u => u.Role == "Admin"))
-    {
-        var hashedPassword = passwordService
-            .HashPassword("Admin@123", null, out byte[] hashKey);
+//    if (!context.Users.Any(u => u.Role == "Admin"))
+//    {
+//        var hashedPassword = passwordService
+//            .HashPassword("Admin@123", null, out byte[] hashKey);
 
-        var adminUser = new User
-        {
-            Username = "admin",
-            Email = "admin@system.com",
-            Password = hashedPassword,
-            PasswordHash = hashKey,
-            Role = "Admin"
-        };
+//        var adminUser = new User
+//        {
+//            Username = "admin",
+//            Email = "admin@system.com",
+//            Password = hashedPassword,
+//            PasswordHash = hashKey,
+//            Role = "Admin"
+//        };
 
-        context.Users.Add(adminUser);
-        context.SaveChanges();
-    }
-}
+//        context.Users.Add(adminUser);
+//        context.SaveChanges();
+//    }
+//}
 
 app.Run();
