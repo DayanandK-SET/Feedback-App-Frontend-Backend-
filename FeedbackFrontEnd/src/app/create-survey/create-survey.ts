@@ -188,47 +188,56 @@ export class CreateSurvey {
 buildInvitationEmail(publicLink: string): string {
   const title = this.title.trim();
 
-  return `<!DOCTYPE html>
+  return `
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0; }
-  .wrapper { max-width: 560px; margin: 32px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
-  .header  { background: #1a1a2e; padding: 28px 32px; text-align: center; }
-  .header h1 { color: #7c83fd; margin: 0; font-size: 22px; }
-  .body    { padding: 32px; text-align: center; }
-  .icon    { font-size: 48px; margin-bottom: 16px; }
-  .heading { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
-  .message { font-size: 15px; color: #374151; line-height: 1.6; margin-bottom: 28px; }
-  .survey-name { font-weight: 700; color: #7c83fd; }
-  .btn     { display: inline-block; background: #7c83fd; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; }
-  .note    { font-size: 12px; color: #9ca3af; margin-top: 20px; line-height: 1.5; }
-  .footer  { background: #f9fafb; padding: 16px 32px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #f3f4f6; }
-</style>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0; }
+    .wrapper { max-width: 560px; margin: 32px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    .header  { background: #1a1a2e; padding: 28px 32px; text-align: center; }
+    .header h1 { color: #7c83fd; margin: 0; font-size: 22px; }
+    .body    { padding: 32px; text-align: center; }
+    .icon    { font-size: 48px; margin-bottom: 16px; }
+    .heading { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .message { font-size: 15px; color: #374151; line-height: 1.6; margin-bottom: 28px; }
+    .survey-name { font-weight: 700; color: #7c83fd; }
+    .btn     { display: inline-block; background: #7c83fd; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; }
+    .note    { font-size: 12px; color: #9ca3af; margin-top: 20px; line-height: 1.5; }
+    .footer  { background: #f9fafb; padding: 16px 32px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #f3f4f6; }
+  </style>
 </head>
 <body>
   <div class="wrapper">
-    <div class="header"><h1>📋 FeedbackApp</h1></div>
+    <div class="header">
+      <h1>📋 FeedbackApp</h1>
+    </div>
     <div class="body">
       <div class="icon">👋</div>
       <div class="heading">You've been invited!</div>
       <p class="message">
-        You are invited to complete the survey:<br>
-        <span class="survey-name">"${this.escapeHtml(title)}"</span><br><br>
+        You are invited to complete the survey:<br/>
+        <span class="survey-name">"${this.escapeHtml(title)}"</span><br/><br/>
         Please complete the survey at your earliest convenience.
       </p>
+
       <a href="${publicLink}" class="btn">Access Survey</a>
+
       <p class="note">
-        You will need to verify your email with a one-time password (OTP) to access the survey.<br>
+        You will need to verify your email with a one-time password (OTP) to access the survey.<br/>
         If you did not expect this invitation, you can safely ignore this email.
       </p>
     </div>
-    <div class="footer">Sent by FeedbackApp · Do not reply to this email</div>
+    <div class="footer">
+      Sent by FeedbackApp · Do not reply to this email
+    </div>
   </div>
 </body>
-</html>`;
+</html>
+`;
 }
+
 
 
   private escapeHtml(text: string): string {
