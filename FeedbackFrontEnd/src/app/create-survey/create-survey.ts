@@ -185,13 +185,14 @@ export class CreateSurvey {
   // Builds the HTML invitation email that is sent to each participant.
   // The backend receives this HTML and sends it as-is — no HTML in the backend.
 
-  buildInvitationEmail(): string {
-    const surveyLink = `http://localhost:4200/survey/SURVEY_LINK/verify`;
-    const title = this.title.trim();
+buildInvitationEmail(publicLink: string): string {
+  const title = this.title.trim();
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><style>
+<head>
+<meta charset="utf-8">
+<style>
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0; }
   .wrapper { max-width: 560px; margin: 32px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
   .header  { background: #1a1a2e; padding: 28px 32px; text-align: center; }
@@ -204,7 +205,8 @@ export class CreateSurvey {
   .btn     { display: inline-block; background: #7c83fd; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; }
   .note    { font-size: 12px; color: #9ca3af; margin-top: 20px; line-height: 1.5; }
   .footer  { background: #f9fafb; padding: 16px 32px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #f3f4f6; }
-</style></head>
+</style>
+</head>
 <body>
   <div class="wrapper">
     <div class="header"><h1>📋 FeedbackApp</h1></div>
@@ -213,20 +215,21 @@ export class CreateSurvey {
       <div class="heading">You've been invited!</div>
       <p class="message">
         You are invited to complete the survey:<br>
-        <span class="survey-name">&quot;${this.escapeHtml(title)}&quot;</span><br><br>
+        <span class="survey-name">"${this.escapeHtml(title)}"</span><br><br>
         Please complete the survey at your earliest convenience.
       </p>
-      <a href="${surveyLink}" class="btn">Access Survey</a>
+      <a href="${publicLink}" class="btn">Access Survey</a>
       <p class="note">
         You will need to verify your email with a one-time password (OTP) to access the survey.<br>
         If you did not expect this invitation, you can safely ignore this email.
       </p>
     </div>
-    <div class="footer">Sent by FeedbackApp &nbsp;·&nbsp; Do not reply to this email</div>
+    <div class="footer">Sent by FeedbackApp · Do not reply to this email</div>
   </div>
 </body>
 </html>`;
-  }
+}
+
 
   private escapeHtml(text: string): string {
     return text
@@ -238,55 +241,80 @@ export class CreateSurvey {
 
   // ── Submit Survey ─────────────────────────────────
 
-  submitSurvey() {
-    this.submitError.set(''); this.submitSuccess.set('');
+submitSurvey() {
+  this.submitError.set('');
+  this.submitSuccess.set('');
 
-    if (!this.title.trim()) { this.submitError.set('Survey title is required.'); return; }
-    if (this.questions().length === 0) { this.submitError.set('Please add at least one question.'); return; }
-
-    if (this.isPrivate) {
-      // Re-parse emails on submit to catch any unsaved input
-      this.parseEmails();
-      if (this.emailInputError) return;
-      if (this.participantEmails.length === 0) {
-        this.submitError.set('Please add at least one participant email for a private survey.');
-        return;
-      }
-    }
-
-    const dto: CreateSurveyDto = {
-      title: this.title.trim(),
-      description: this.description.trim(),
-      expireAt: this.expireAt ? new Date(this.expireAt).toISOString() : null,
-      maxResponses: this.maxResponses || null,
-      isPrivate: this.isPrivate,
-      participantEmails: this.isPrivate ? this.participantEmails : undefined,
-      invitationHtmlBody: this.isPrivate ? this.buildInvitationEmail() : undefined,
-      questions: this.questions().map(q => {
-        const question: CreateQuestionDto = {};
-        if (q.fromBank && q.questionBankId) {
-          question.questionBankId = q.questionBankId;
-        } else {
-          question.text = q.text;
-          question.questionType = q.questionType;
-          if (q.questionType === QuestionType.MultipleChoice)
-            question.options = q.options.filter(o => o.trim());
-        }
-        return question;
-      })
-    };
-
-    this.isSubmitting.set(true);
-    this.surveyService.createSurvey(dto).subscribe({
-      next: () => {
-        this.isSubmitting.set(false);
-        this.submitSuccess.set('Survey created successfully!');
-        setTimeout(() => this.router.navigateByUrl('/dashboard'), 1500);
-      },
-      error: (err) => {
-        this.isSubmitting.set(false);
-        this.submitError.set(err?.error?.message || 'Failed to create survey. Please try again.');
-      }
-    });
+  if (!this.title.trim()) {
+    this.submitError.set('Survey title is required.');
+    return;
   }
+
+  if (this.questions().length === 0) {
+    this.submitError.set('Please add at least one question.');
+    return;
+  }
+
+  if (this.isPrivate) {
+    this.parseEmails();
+    if (this.emailInputError) return;
+
+    if (this.participantEmails.length === 0) {
+      this.submitError.set(
+        'Please add at least one participant email for a private survey.'
+      );
+      return;
+    }
+  }
+
+  const dto: CreateSurveyDto = {
+    title: this.title.trim(),
+    description: this.description.trim(),
+    expireAt: this.expireAt
+      ? new Date(this.expireAt).toISOString()
+      : null,
+    maxResponses: this.maxResponses || null,
+    isPrivate: this.isPrivate,
+    participantEmails: this.isPrivate
+      ? this.participantEmails
+      : undefined,
+
+    //send email template ONLY for private surveys
+    invitationHtmlBody: this.isPrivate
+      ? this.buildInvitationEmail('__SURVEY_LINK__')
+      : undefined,
+
+    questions: this.questions().map(q => {
+      const question: CreateQuestionDto = {};
+      if (q.fromBank && q.questionBankId) {
+        question.questionBankId = q.questionBankId;
+      } else {
+        question.text = q.text;
+        question.questionType = q.questionType;
+        if (q.questionType === QuestionType.MultipleChoice) {
+          question.options = q.options.filter(o => o.trim());
+        }
+      }
+      return question;
+    })
+  };
+
+  this.isSubmitting.set(true);
+
+  this.surveyService.createSurvey(dto).subscribe({
+    next: () => {
+      this.isSubmitting.set(false);
+      this.submitSuccess.set('Survey created successfully!');
+      setTimeout(() => this.router.navigateByUrl('/dashboard'), 1500);
+    },
+    error: (err) => {
+      this.isSubmitting.set(false);
+      this.submitError.set(
+        err?.error?.message ||
+        'Failed to create survey. Please try again.'
+      );
+    }
+  });
+}
+
 }
